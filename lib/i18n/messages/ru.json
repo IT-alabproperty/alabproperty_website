@@ -1,0 +1,339 @@
+{
+  "Nav": {
+    "home": "Главная",
+    "properties": "Объекты",
+    "legal": "Legal",
+    "company": "Компания",
+    "contacts": "Контакты",
+    "getOffer": "Получить предложение",
+    "getOfferShort": "Заявка"
+  },
+
+  "Hero": {
+    "meta": "Bangkok · Thailand",
+    "metaSub": "Real Estate & Legal Counsel · Est. 2018",
+    "titleLine1": "Недвижимость",
+    "titleLine2": "в Бангкоке,",
+    "titleLine3": "под защитой закона.",
+    "tag": "Полное сопровождение",
+    "description": "От первого просмотра до получения ключей. Юридическая команда ALAB ведёт каждую сделку лично, на русском и английском.",
+    "ctaPrimary": "Получить предложение",
+    "ctaSecondary": "Смотреть объекты"
+  },
+
+  "SearchSection": {
+    "tag": "Поиск объекта",
+    "title": "Найдите дом, который",
+    "titleEm": "ищете."
+  },
+
+  "Search": {
+    "forSale": "Покупка",
+    "forRent": "Аренда",
+    "type": "Тип",
+    "selectType": "Любой тип",
+    "district": "Район",
+    "selectDistrict": "Любой район",
+    "bedrooms": "Спальни",
+    "anyBedrooms": "Любое",
+    "priceFrom": "Цена от",
+    "priceFromPlaceholder": "Минимум",
+    "priceTo": "Цена до",
+    "priceToPlaceholder": "Максимум",
+    "code": "Код объекта",
+    "codePlaceholder": "ALAB-…",
+    "find": "Найти",
+    "reset": "Сбросить",
+    "area": "Площадь",
+    "budget": "Бюджет",
+    "anyType": "Любой",
+    "areaFrom": "от {n} м²",
+    "budgetUpTo": "до {price}",
+    "budgetFrom": "от {price}",
+    "budgetRange": "{from}, {to}"
+  },
+
+  "PropertyType": {
+    "condo": "Кондоминиум",
+    "penthouse": "Пентхаус",
+    "villa": "Вилла",
+    "house": "Дом",
+    "townhouse": "Таунхаус",
+    "land": "Земля",
+    "commercial": "Коммерческая",
+    "office": "Офис",
+    "retail": "Торговое помещение",
+    "hotel": "Отель / Апарт-отель"
+  },
+
+  "District": {
+    "sukhumvit": "Сукхумвит",
+    "silom": "Силом",
+    "sathorn": "Сатхон",
+    "thonglor": "Тхонгло",
+    "phrom-phong": "Пхром Пхонг",
+    "asok": "Асок",
+    "riverside": "Riverside",
+    "ari": "Ари"
+  },
+
+  "Ownership": {
+    "freehold": "Полная собственность",
+    "leasehold": "Долгосрочная аренда",
+    "leaseRemaining": "осталось {years} лет"
+  },
+
+  "Deal": {
+    "sale": "продажа",
+    "rent": "аренда"
+  },
+
+  "Status": {
+    "available": "В продаже",
+    "reserved": "Забронирован",
+    "sold": "Продан"
+  },
+
+  "Tags": {
+    "sea-view": "Вид на море",
+    "city-view": "Вид на город",
+    "river-view": "Вид на реку",
+    "new-build": "Новостройка",
+    "fully-furnished": "С мебелью",
+    "pool-access": "Свой бассейн",
+    "high-floor": "Высокий этаж",
+    "investor-pick": "Выбор инвесторов"
+  },
+
+  "Amenities": {
+    "pool": "Бассейн",
+    "gym": "Спортзал",
+    "sauna": "Сауна",
+    "parking": "Парковка",
+    "security": "Охрана 24/7",
+    "concierge": "Концьерж",
+    "co-working": "Коворкинг",
+    "garden": "Сад",
+    "rooftop": "Крыша-терраса",
+    "kids-area": "Детская зона",
+    "pet-friendly": "Можно с животными"
+  },
+
+  "Property": {
+    "bedroomsLabel": "{count, plural, one {# спальня} few {# спальни} other {# спален}}",
+    "bathroomsLabel": "{count, plural, one {# санузел} few {# санузла} other {# санузлов}}",
+    "areaLabel": "{n} м²",
+    "floorLabel": "{n} этаж из {total}",
+    "yearBuilt": "Год постройки {year}",
+    "developer": "Застройщик",
+    "bathrooms": "Санузлы",
+    "area": "Площадь",
+    "floor": "Этаж",
+    "year": "Год"
+  },
+
+  "Guarantee": {
+    "tag": "Юридическая гарантия",
+    "titleLine1": "100% защита",
+    "titleLine2": "каждой",
+    "titleLine2Em": "сделки.",
+    "description": "Покупка недвижимости в Таиланде требует точного знания закона. Мы практикующие юристы. Каждая сделка ALAB Property проходит проверку собственным юридическим отделом: от due diligence до регистрации в Land Department.",
+    "statLabel": "Юридическая чистота",
+    "stages": {
+      "stage1Title": "Подбор",
+      "stage1Desc": "Объекты от проверенных застройщиков и собственников",
+      "stage2Title": "Due Diligence",
+      "stage2Desc": "Проверка титула, обременений, репутации застройщика",
+      "stage3Title": "Сделка",
+      "stage3Desc": "Сопровождение договоров, эскроу, валютных операций",
+      "stage4Title": "Заселение",
+      "stage4Desc": "Регистрация прав, передача ключей, поствложение"
+    }
+  },
+
+  "FeaturedProperties": {
+    "tag": "Избранные объекты",
+    "titleLine1": "Лента",
+    "titleLine1Em": "премиальных",
+    "titleLine2": "предложений",
+    "viewAll": "Смотреть все объекты"
+  },
+
+  "Values": {
+    "imageLabel": "ALAB Property, Bangkok",
+    "tag": "Почему ALAB",
+    "titleLine1": "Не агенты.",
+    "titleLine2Em": "Юристы",
+    "titleLine2": "и партнёры.",
+    "items": {
+      "item1Title": "Двойная экспертиза",
+      "item1Desc": "Команда практикующих юристов и брокеров. Закон и рынок в одних руках.",
+      "item2Title": "Сопровождение на родном языке",
+      "item2Desc": "Договоры, переговоры и регистрация на вашем родном языке - русском или английском. Без посредников, без потери смысла.",
+      "item3Title": "От заявки до заселения",
+      "item3Desc": "Один партнёр на весь путь. Прозрачные этапы, фиксированная стоимость услуг.",
+      "item4Title": "International Business Investment",
+      "item4Desc": "Помогаем структурировать международные бизнес-активы в Таиланде: корпоративное сопровождение, защита инвестиций."
+    },
+    "consultNote": "ALAB Consult · Юридическая практика с 2021 года"
+  },
+
+  "FinalCta": {
+    "tag": "Личное предложение",
+    "titleLine1": "Расскажите о ваших",
+    "titleLine2Em": "планах,",
+    "titleLine2": "мы подберём.",
+    "description": "Юридический консультант ALAB свяжется с вами в течение 12 часов и подготовит подборку под ваши задачи. Без обязательств.",
+    "cta": "Получить предложение"
+  },
+
+  "Footer": {
+    "tagline": "Bangkok, Thailand · Real Estate & Legal Counsel",
+    "copyright": "© {year} ALAB Property",
+    "consultNote": "ALAB Consult · Юридическая практика с 2021 года",
+    "nativeLanguage": "Сопровождение на родном языке",
+    "businessInvest": "International Business Investment"
+  },
+
+  "Catalog": {
+    "eyebrow": "Каталог",
+    "titleLine1": "Лента",
+    "titleLine1Em": "премиальных",
+    "titleLine2": "объектов в Бангкоке",
+    "subtitle": "Подобранная команда ALAB подборка кондоминиумов, вилл и пентхаусов от проверенных застройщиков. Каждый объект прошёл юридическую проверку.",
+    "moreFilters": "Фильтры",
+    "filters": "Фильтры",
+    "apply": "Показать результаты",
+    "close": "Закрыть",
+    "viewGrid": "Сетка",
+    "viewList": "Список",
+    "priceRange": "Цена",
+    "ownership": "Право собственности",
+    "amenities": "Удобства",
+    "tags": "Особенности",
+    "resultCount": "{count, plural, one {# объект} few {# объекта} other {# объектов}}",
+    "endOfResults": "Это все доступные объекты",
+    "emptyTitle": "Ничего не найдено",
+    "emptyDesc": "Попробуйте смягчить параметры поиска или сбросить фильтры.",
+    "emptyReset": "Сбросить фильтры",
+    "sort": {
+      "newest": "Сначала новые",
+      "priceAsc": "Цена: по возрастанию",
+      "priceDesc": "Цена: по убыванию",
+      "areaDesc": "Площадь: больше"
+    },
+    "filterPanel": {
+      "deal": "Тип сделки",
+      "type": "Тип",
+      "district": "Район",
+      "bedrooms": "Спальни",
+      "anyOption": "Любой",
+      "bedroomsAny": "Любое"
+    }
+  },
+
+  "PropertyDetail": {
+    "showMorePhotos": "Ещё {count} фото"
+  },
+
+  "PropertyPage": {
+    "backToCatalog": "К каталогу",
+    "aboutEyebrow": "Об объекте",
+    "aboutTitle": "Описание",
+    "highlightsEyebrow": "Особенности",
+    "amenitiesEyebrow": "Удобства",
+    "amenitiesTitle": "Что включено",
+    "roiEyebrow": "Инвестиционный анализ",
+    "roiTitle": "Калькулятор доходности",
+    "mapEyebrow": "Расположение",
+    "mapTitle": "Объект на карте",
+    "relatedEyebrow": "Похожие объекты",
+    "relatedTitle": "Похожие объекты"
+  },
+
+  "Roi": {
+    "title": "Калькулятор ROI",
+    "subtitle": "Оцените годовой доход от аренды и потенциал роста стоимости",
+    "monthlyRent": "Аренда в месяц",
+    "annualExpenses": "Расходы (% от выручки)",
+    "annualExpensesHelp": "Управляющая, налоги, обслуживание, страхование",
+    "vacancy": "Вакансии (% месяцев в году)",
+    "vacancyHelp": "Доля времени, когда объект простаивает",
+    "appreciation": "Рост стоимости в год",
+    "appreciationHelp": "Среднегодовой рост цены актива",
+    "horizon": "Горизонт",
+    "years": "{n} лет",
+    "yearLabel": "Год",
+    "grossYield": "Брутто-доходность",
+    "netYield": "Чистая доходность",
+    "netAnnualIncome": "Чистый доход в год",
+    "totalReturn": "Возврат за {years} лет",
+    "chartTitle": "Прогноз на {years} лет",
+    "assetValue": "Стоимость актива",
+    "cumulativeIncome": "Накопленный доход",
+    "disclaimer": "Расчёт носит ознакомительный характер. Реальная доходность зависит от рынка, состояния объекта и условий аренды. Не является инвестиционным советом."
+  },
+
+  "LegalTrust": {
+    "eyebrow": "Доверие и право",
+    "titleLine1": "Надёжные инвестиции",
+    "titleLine2Em": "и правовая ясность",
+    "subtitle": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Мы убеждены, что каждый иностранный инвестор заслуживает полной прозрачности — от документа на право собственности до налоговой структуры — до подписания единого документа.",
+    "cards": {
+      "ownership": {
+        "tag": "Типы владения",
+        "title": "Фрихолд и лизхолд",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.",
+        "note": "Freehold · Leasehold · Condominium Act"
+      },
+      "dueDiligence": {
+        "tag": "Due Diligence",
+        "title": "Проверка застройщика и права",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat.",
+        "note": "Lorem100 ipsum dolor sit amet, consectetur adipiscing elit."
+      },
+      "transaction": {
+        "tag": "Путь сделки",
+        "title": "От депозита до ключей",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum sed perspiciatis.",
+        "note": "Депозит → ДКП → Передача → Ключи"
+      },
+      "tax": {
+        "tag": "Налоги и сборы",
+        "title": "Прозрачная структура затрат",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione.",
+        "note": "Сбор за перевод · SBT(специальный бизнес-налог) · Гербовый сбор"
+      }
+    },
+    "quote": "Lorem ipsum dolor sit amet — ваши инвестиции, наша правовая гарантия.",
+    "legalGuideLink": "Полное юридическое руководство"
+  },
+
+  "Contact": {
+    "title": "Запросить детали",
+    "subtitle": "Юрист ALAB свяжется с вами в течение 12 часов",
+    "name": "Имя",
+    "namePlaceholder": "Ваше имя",
+    "email": "Email",
+    "phone": "Телефон",
+    "preferredContact": "Предпочтительный способ связи",
+    "contactOptions": {
+      "email": "Email",
+      "phone": "Звонок",
+      "whatsapp": "WhatsApp"
+    },
+    "message": "Сообщение",
+    "defaultMessage": "Здравствуйте, меня интересует объект «{name}». Расскажите подробнее.",
+    "submit": "Отправить запрос",
+    "submitting": "Отправка...",
+    "successTitle": "Спасибо!",
+    "successDesc": "Ваш запрос получен. Юрист ALAB свяжется с вами в ближайшее время.",
+    "sendAnother": "Отправить ещё запрос",
+    "privacy": "Отправляя форму, вы соглашаетесь с обработкой персональных данных. Мы не передаём данные третьим лицам.",
+    "errors": {
+      "nameRequired": "Введите имя",
+      "emailInvalid": "Введите корректный email",
+      "phoneInvalid": "Проверьте формат телефона"
+    }
+  }
+}

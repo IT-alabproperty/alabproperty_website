@@ -1,0 +1,339 @@
+{
+  "Nav": {
+    "home": "Home",
+    "properties": "Properties",
+    "legal": "Legal",
+    "company": "Company",
+    "contacts": "Contact",
+    "getOffer": "Get a Proposal",
+    "getOfferShort": "Inquire"
+  },
+
+  "Hero": {
+    "meta": "Bangkok · Thailand",
+    "metaSub": "Real Estate & Legal Counsel · Est. 2018",
+    "titleLine1": "Real Estate",
+    "titleLine2": "in Bangkok,",
+    "titleLine3": "under the protection of law.",
+    "tag": "Full Transaction Support",
+    "description": "From the first viewing to handing over the keys. The ALAB legal team handles every transaction personally - in English and Russian.",
+    "ctaPrimary": "Get a Proposal",
+    "ctaSecondary": "Browse Properties"
+  },
+
+  "SearchSection": {
+    "tag": "Property Search",
+    "title": "Find the home you're",
+    "titleEm": "looking for."
+  },
+
+  "Search": {
+    "forSale": "For Sale",
+    "forRent": "For Rent",
+    "type": "Type",
+    "selectType": "Any type",
+    "district": "District",
+    "selectDistrict": "Any district",
+    "bedrooms": "Bedrooms",
+    "anyBedrooms": "Any",
+    "priceFrom": "Price from",
+    "priceFromPlaceholder": "Min",
+    "priceTo": "Price to",
+    "priceToPlaceholder": "Max",
+    "code": "Property Code",
+    "codePlaceholder": "ALAB-…",
+    "find": "Search",
+    "reset": "Reset",
+    "area": "Area",
+    "budget": "Budget",
+    "anyType": "Any",
+    "areaFrom": "{n} m² and up",
+    "budgetUpTo": "up to {price}",
+    "budgetFrom": "{price} and up",
+    "budgetRange": "{from}, {to}"
+  },
+
+  "PropertyType": {
+    "condo": "Condominium",
+    "penthouse": "Penthouse",
+    "villa": "Villa",
+    "house": "House",
+    "townhouse": "Townhouse",
+    "land": "Land",
+    "commercial": "Commercial",
+    "office": "Office",
+    "retail": "Retail Space",
+    "hotel": "Hotel / Aparthotel"
+  },
+
+  "District": {
+    "sukhumvit": "Sukhumvit",
+    "silom": "Silom",
+    "sathorn": "Sathorn",
+    "thonglor": "Thonglor",
+    "phrom-phong": "Phrom Phong",
+    "asok": "Asok",
+    "riverside": "Riverside",
+    "ari": "Ari"
+  },
+
+  "Ownership": {
+    "freehold": "Freehold",
+    "leasehold": "Leasehold",
+    "leaseRemaining": "{years} years remaining"
+  },
+
+  "Deal": {
+    "sale": "for sale",
+    "rent": "for rent"
+  },
+
+  "Status": {
+    "available": "Available",
+    "reserved": "Reserved",
+    "sold": "Sold"
+  },
+
+  "Tags": {
+    "sea-view": "Sea View",
+    "city-view": "City View",
+    "river-view": "River View",
+    "new-build": "New Build",
+    "fully-furnished": "Fully Furnished",
+    "pool-access": "Private Pool",
+    "high-floor": "High Floor",
+    "investor-pick": "Investor's Pick"
+  },
+
+  "Amenities": {
+    "pool": "Swimming Pool",
+    "gym": "Fitness Center",
+    "sauna": "Sauna",
+    "parking": "Parking",
+    "security": "24/7 Security",
+    "concierge": "Concierge",
+    "co-working": "Co-working Space",
+    "garden": "Garden",
+    "rooftop": "Rooftop Terrace",
+    "kids-area": "Kids' Area",
+    "pet-friendly": "Pet-Friendly"
+  },
+
+  "Property": {
+    "bedroomsLabel": "{count, plural, one {# bedroom} other {# bedrooms}}",
+    "bathroomsLabel": "{count, plural, one {# bathroom} other {# bathrooms}}",
+    "areaLabel": "{n} m²",
+    "floorLabel": "Floor {n} of {total}",
+    "yearBuilt": "Built in {year}",
+    "developer": "Developer",
+    "bathrooms": "Bathrooms",
+    "area": "Area",
+    "floor": "Floor",
+    "year": "Year"
+  },
+
+  "Guarantee": {
+    "tag": "Legal Guarantee",
+    "titleLine1": "100% protection",
+    "titleLine2": "for every",
+    "titleLine2Em": "transaction.",
+    "description": "Buying property in Thailand requires precise legal expertise. We are practicing lawyers. Every ALAB Property transaction is reviewed by our in-house legal team — from due diligence to Land Department registration.",
+    "statLabel": "Legal Clarity",
+    "stages": {
+      "stage1Title": "Selection",
+      "stage1Desc": "Properties from vetted developers and verified owners",
+      "stage2Title": "Due Diligence",
+      "stage2Desc": "Title verification, encumbrance checks, developer reputation",
+      "stage3Title": "Transaction",
+      "stage3Desc": "Contracts, escrow, FX operations — fully managed",
+      "stage4Title": "Move-in",
+      "stage4Desc": "Title registration, key handover, post-investment support"
+    }
+  },
+
+  "FeaturedProperties": {
+    "tag": "Featured Listings",
+    "titleLine1": "A curated edit of",
+    "titleLine1Em": "premium",
+    "titleLine2": "properties",
+    "viewAll": "View All Listings"
+  },
+
+  "Values": {
+    "imageLabel": "ALAB Property, Bangkok",
+    "tag": "Why ALAB",
+    "titleLine1": "Not agents.",
+    "titleLine2Em": "Lawyers",
+    "titleLine2": "and partners.",
+    "items": {
+      "item1Title": "Dual Expertise",
+      "item1Desc": "A team of practicing lawyers and brokers. Law and market under one roof.",
+      "item2Title": "Support in Your Native Language",
+      "item2Desc": "Contracts, negotiations and registration in your native language — English or Russian. No intermediaries, no lost meaning.",
+      "item3Title": "From Inquiry to Move-in",
+      "item3Desc": "One partner, end to end. Transparent stages, fixed fees.",
+      "item4Title": "International Business Investment",
+      "item4Desc": "We help structure international business assets in Thailand: corporate advisory, and investment protection."
+    },
+    "consultNote": "ALAB Consult · Legal practice since 2021"
+  },
+
+  "FinalCta": {
+    "tag": "Personal Proposal",
+    "titleLine1": "Tell us about your",
+    "titleLine2Em": "plans,",
+    "titleLine2": "we'll do the rest.",
+    "description": "An ALAB legal advisor will reach out within 12 hours and prepare a tailored selection. No commitment.",
+    "cta": "Get a Proposal"
+  },
+
+  "Footer": {
+    "tagline": "Bangkok, Thailand · Real Estate & Legal Counsel",
+    "copyright": "© {year} ALAB Property",
+    "consultNote": "ALAB Consult · Legal practice since 2021",
+    "nativeLanguage": "Native language support",
+    "businessInvest": "International Business Investment"
+  },
+
+  "Catalog": {
+    "eyebrow": "Catalog",
+    "titleLine1": "A curated edit of",
+    "titleLine1Em": "premium",
+    "titleLine2": "properties in Bangkok",
+    "subtitle": "ALAB's hand-picked selection of condominiums, villas and penthouses from vetted developers. Every listing has passed legal review.",
+    "moreFilters": "Filters",
+    "filters": "Filters",
+    "apply": "Show results",
+    "close": "Close",
+    "viewGrid": "Grid",
+    "viewList": "List",
+    "priceRange": "Price",
+    "ownership": "Ownership",
+    "amenities": "Amenities",
+    "tags": "Highlights",
+    "resultCount": "{count, plural, one {# property} other {# properties}}",
+    "endOfResults": "These are all available listings",
+    "emptyTitle": "No properties found",
+    "emptyDesc": "Try relaxing the filters or resetting your search.",
+    "emptyReset": "Reset filters",
+    "sort": {
+      "newest": "Newest first",
+      "priceAsc": "Price: low to high",
+      "priceDesc": "Price: high to low",
+      "areaDesc": "Area: largest first"
+    },
+    "filterPanel": {
+      "deal": "Deal type",
+      "type": "Type",
+      "district": "District",
+      "bedrooms": "Bedrooms",
+      "anyOption": "Any",
+      "bedroomsAny": "Any"
+    }
+  },
+
+  "PropertyDetail": {
+    "showMorePhotos": "+{count} photos"
+  },
+
+  "PropertyPage": {
+    "backToCatalog": "Back to catalog",
+    "aboutEyebrow": "About this property",
+    "aboutTitle": "Description",
+    "highlightsEyebrow": "Highlights",
+    "amenitiesEyebrow": "Amenities",
+    "amenitiesTitle": "What's included",
+    "roiEyebrow": "Investment analysis",
+    "roiTitle": "ROI calculator",
+    "mapEyebrow": "Location",
+    "mapTitle": "Property on the map",
+    "relatedEyebrow": "Related",
+    "relatedTitle": "Similar properties"
+  },
+
+  "Roi": {
+    "title": "ROI Calculator",
+    "subtitle": "Estimate annual rental income and appreciation potential",
+    "monthlyRent": "Monthly rent",
+    "annualExpenses": "Expenses (% of revenue)",
+    "annualExpensesHelp": "Management, taxes, maintenance, insurance",
+    "vacancy": "Vacancy (% of months/year)",
+    "vacancyHelp": "Share of time the unit is unoccupied",
+    "appreciation": "Annual appreciation",
+    "appreciationHelp": "Average yearly asset value growth",
+    "horizon": "Horizon",
+    "years": "{n} years",
+    "yearLabel": "Year",
+    "grossYield": "Gross yield",
+    "netYield": "Net yield",
+    "netAnnualIncome": "Net annual income",
+    "totalReturn": "{years}-year total return",
+    "chartTitle": "{years}-year projection",
+    "assetValue": "Asset value",
+    "cumulativeIncome": "Cumulative income",
+    "disclaimer": "Calculation is illustrative only. Actual return depends on market conditions, property state and lease terms. Not investment advice."
+  },
+
+  "LegalTrust": {
+    "eyebrow": "Trust & Legals",
+    "titleLine1": "Secure Investments",
+    "titleLine2Em": "& Legal Clarity",
+    "subtitle": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. We believe every foreign investor deserves full transparency — from title deed to tax structure — before signing a single document.",
+    "cards": {
+      "ownership": {
+        "tag": "Ownership Types",
+        "title": "Freehold & Leasehold",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.",
+        "note": "Freehold · Leasehold · Condominium Act"
+      },
+      "dueDiligence": {
+        "tag": "Due Diligence",
+        "title": "Developer & Title Verification",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat.",
+        "note": "Chanote · Nor Sor 3 · Land Department"
+      },
+      "transaction": {
+        "tag": "Transaction Path",
+        "title": "From Deposit to Key Handover",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum sed perspiciatis.",
+        "note": "Deposit → SPA → Transfer → Keys"
+      },
+      "tax": {
+        "tag": "Tax & Fees",
+        "title": "Transparent Cost Breakdown",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione.",
+        "note": "Transfer Fee · SBT · Stamp Duty"
+      }
+    },
+    "quote": "Lorem ipsum dolor sit amet — your investment, our legal certainty.",
+    "legalGuideLink": "Full Legal Guide"
+  },
+
+  "Contact": {
+    "title": "Request details",
+    "subtitle": "An ALAB lawyer will reach out within 12 hours",
+    "name": "Name",
+    "namePlaceholder": "Your name",
+    "email": "Email",
+    "phone": "Phone",
+    "preferredContact": "Preferred contact method",
+    "contactOptions": {
+      "email": "Email",
+      "phone": "Call",
+      "whatsapp": "WhatsApp"
+    },
+    "message": "Message",
+    "defaultMessage": "Hello, I'm interested in the property \"{name}\". Please tell me more.",
+    "submit": "Send request",
+    "submitting": "Sending...",
+    "successTitle": "Thank you!",
+    "successDesc": "Your request has been received. An ALAB lawyer will be in touch shortly.",
+    "sendAnother": "Send another request",
+    "privacy": "By submitting this form you agree to the processing of your personal data. We never share your information with third parties.",
+    "errors": {
+      "nameRequired": "Please enter your name",
+      "emailInvalid": "Please enter a valid email",
+      "phoneInvalid": "Please check your phone format"
+    }
+  }
+}

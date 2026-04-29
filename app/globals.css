@@ -1,0 +1,339 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import 'leaflet/dist/leaflet.css';
+
+/* ============================================================
+   BASE
+   ============================================================ */
+@layer base {
+  :root {
+    --teak-deep: #2B1810;
+    --teak: #3A2418;
+    --teak-warm: #5C3A26;
+    --cream: #F5EFE6;
+    --cream-warm: #EDE3D2;
+    --paper: #FBF8F2;
+    --gold: #C9A961;
+    --gold-deep: #A8882F;
+    --ink: #1A0F08;
+    --muted: #8C7A6B;
+    --line: rgba(58, 36, 24, 0.12);
+    --line-strong: rgba(58, 36, 24, 0.25);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-paper text-ink antialiased;
+    font-family: var(--font-inter-tight), system-ui, sans-serif;
+    line-height: 1.55;
+  }
+}
+
+/* ============================================================
+   GLOBAL TEXTURES (wood + grain)
+   ============================================================ */
+.alab-wood-texture {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.04;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px, transparent 2px,
+      rgba(58, 36, 24, 0.4) 2px, rgba(58, 36, 24, 0.4) 3px,
+      transparent 3px, transparent 8px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px, transparent 40px,
+      rgba(92, 58, 38, 0.3) 40px, rgba(92, 58, 38, 0.3) 41px,
+      transparent 41px, transparent 90px
+    );
+  mix-blend-mode: multiply;
+}
+
+.alab-grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.25;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+
+/* ============================================================
+   NAV: dark on hero, light when scrolled
+   ============================================================ */
+.alab-nav {
+  background: rgba(43, 24, 16, 0.4);
+  border-color: rgba(245, 239, 230, 0.1);
+}
+.alab-nav[data-scrolled='true'] {
+  background: rgba(251, 248, 242, 0.92);
+  border-color: var(--line);
+}
+
+.alab-logo { color: var(--cream); }
+.alab-logo-mark { color: var(--gold); }
+.alab-nav[data-scrolled='true'] .alab-logo { color: var(--teak); }
+.alab-nav[data-scrolled='true'] .alab-logo-mark { color: var(--gold-deep); }
+
+.alab-nav-links a {
+  color: var(--cream);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  position: relative;
+  transition: color 0.3s;
+  white-space: nowrap;
+}
+.alab-nav-links a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -6px;
+  height: 1px;
+  background: var(--gold);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.alab-nav-links a:hover { color: var(--gold); }
+.alab-nav-links a:hover::after { transform: scaleX(1); }
+
+.alab-nav[data-scrolled='true'] .alab-nav-links a { color: var(--teak); }
+.alab-nav[data-scrolled='true'] .alab-nav-links a:hover { color: var(--gold-deep); }
+
+/* selectors (currency + language) */
+.alab-selector { border-color: rgba(245, 239, 230, 0.18); }
+.alab-nav[data-scrolled='true'] .alab-selector { border-color: var(--line-strong); }
+
+.alab-selector-btn {
+  background: transparent;
+  color: rgba(245, 239, 230, 0.6);
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}
+.alab-selector-btn:hover { color: var(--cream); }
+.alab-selector-btn[data-active='true'] {
+  background: var(--gold);
+  color: var(--teak-deep);
+}
+.alab-nav[data-scrolled='true'] .alab-selector-btn { color: var(--muted); }
+.alab-nav[data-scrolled='true'] .alab-selector-btn:hover { color: var(--teak); }
+.alab-nav[data-scrolled='true'] .alab-selector-btn[data-active='true'] {
+  background: var(--teak);
+  color: var(--cream);
+}
+
+/* nav cta */
+.alab-nav-cta {
+  background: var(--gold);
+  color: var(--teak-deep);
+  border: none;
+  font-family: inherit;
+}
+.alab-nav-cta:hover {
+  background: var(--cream);
+  transform: translateY(-1px);
+}
+.alab-nav[data-scrolled='true'] .alab-nav-cta {
+  background: var(--teak);
+  color: var(--cream);
+}
+.alab-nav[data-scrolled='true'] .alab-nav-cta:hover {
+  background: var(--gold-deep);
+}
+
+/* mobile icon CTA + burger button */
+.alab-nav-cta-icon,
+.alab-nav-burger {
+  background: transparent;
+  border: 1px solid rgba(245, 239, 230, 0.25);
+  color: var(--cream);
+  cursor: pointer;
+}
+.alab-nav-cta-icon {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--teak-deep);
+}
+.alab-nav[data-scrolled='true'] .alab-nav-cta-icon {
+  background: var(--teak);
+  border-color: var(--teak);
+  color: var(--cream);
+}
+.alab-nav[data-scrolled='true'] .alab-nav-burger {
+  border-color: var(--line-strong);
+  color: var(--teak);
+}
+
+/* mobile menu overlay */
+.alab-mobile-menu {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-12px);
+  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.alab-mobile-menu[data-open='true'] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+/* ============================================================
+   HERO TITLE: line reveal animation
+   ============================================================ */
+.alab-hero-title-line {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.05em;
+}
+.alab-hero-title-line span {
+  display: inline-block;
+  transform: translateY(110%);
+  animation: alabSlideUp 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.alab-hero-title-line:nth-child(1) span { animation-delay: 0.5s; }
+.alab-hero-title-line:nth-child(2) span { animation-delay: 0.7s; }
+.alab-hero-title-line:nth-child(3) span { animation-delay: 0.9s; }
+
+.alab-fade-in {
+  opacity: 0;
+  animation: alabFadeIn 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes alabSlideUp {
+  to { transform: translateY(0); }
+}
+@keyframes alabFadeIn {
+  to { opacity: 1; }
+}
+
+/* ============================================================
+   HERO SLIDESHOW: ken burns
+   ============================================================ */
+.alab-hero-slide {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transition: opacity 2s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: scale(1);
+  transform-origin: center center;
+}
+.alab-hero-slide[data-active='true'] {
+  opacity: 1;
+  /* Ken Burns plays once per activation, holding the final scale (forwards).
+     Duration covers the full visible window: 11s active + 2s fade = 13s.
+     Linear easing for steady, calm camera glide.
+     Because each slide holds its end-state and the next slide begins from scale(1)
+     while fading in over the still-zoomed previous one, the eye perceives
+     continuous forward motion - no snap-back. */
+  animation: alabKenBurns 13s linear forwards;
+}
+.alab-hero-slide::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(43, 24, 16, 0.55) 0%, rgba(43, 24, 16, 0.25) 40%, rgba(26, 15, 8, 0.85) 100%),
+    linear-gradient(90deg, rgba(43, 24, 16, 0.4) 0%, transparent 60%);
+}
+@keyframes alabKenBurns {
+  from { transform: scale(1); }
+  to { transform: scale(1.12); }
+}
+
+/* ============================================================
+   SCROLL REVEAL
+   ============================================================ */
+.alab-reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.alab-reveal[data-in='true'] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ============================================================
+   GUARANTEE: subtle pinstripe overlay
+   ============================================================ */
+.alab-guarantee-bg {
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px, transparent 1px,
+      rgba(201, 169, 97, 0.04) 1px, rgba(201, 169, 97, 0.04) 2px,
+      transparent 2px, transparent 12px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px, transparent 80px,
+      rgba(245, 239, 230, 0.03) 80px, rgba(245, 239, 230, 0.03) 81px,
+      transparent 81px, transparent 200px
+    );
+}
+
+/* ============================================================
+   LOADING SCREEN ANIMATIONS
+   ============================================================ */
+@keyframes alabShieldDraw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes alabDetailFade {
+  to { opacity: 1; }
+}
+@keyframes alabLineExpand {
+  from { transform: scaleX(0); opacity: 0; }
+  to   { transform: scaleX(1); opacity: 1; }
+}
+@keyframes alabTextReveal {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes alabGlowPulse {
+  0%, 100% { opacity: 0.06; }
+  50%       { opacity: 0.14; }
+}
+
+/* ============================================================
+   404 PAGE ANIMATIONS
+   ============================================================ */
+@keyframes alabMarchAnts {
+  to { stroke-dashoffset: -8; }
+}
+@keyframes alabHookSway {
+  0%, 100% { transform: rotate(-4deg); }
+  50%       { transform: rotate(4deg); }
+}
+@keyframes alab404FadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 1180px) {
+  .alab-nav-links { gap: 24px; }
+  .alab-nav-links a { font-size: 11px; }
+}
+@media (max-width: 480px) {
+  .alab-logo { font-size: 16px !important; letter-spacing: 0.1em !important; }
+}

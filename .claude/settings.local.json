@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(curl -s http://localhost:3000/properties)",
+      "Bash(cat middleware.ts)",
+      "Bash(cat src/middleware.ts)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3001/properties)",
+      "Bash(npx tsc *)",
+      "Bash(npm install *)",
+      "Bash(pkill -f \"next dev\")",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({**d.get\\('dependencies',{}\\), **d.get\\('devDependencies',{}\\)}, indent=2\\)\\)\")"
+    ]
+  }
+}
