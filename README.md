@@ -55,6 +55,7 @@ alab-property/
         └── messages/
             ├── ru.json
             └── en.json
+
 ```
 
 ## Key Design Decisions
