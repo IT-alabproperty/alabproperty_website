@@ -2,6 +2,9 @@
   "Nav": {
     "home": "Home",
     "properties": "Properties",
+    "business": "Business",
+    "businessFull": "Business & Investment",
+    "blog": "Blog",
     "legal": "Legal",
     "company": "Company",
     "contacts": "Contact",
@@ -13,7 +16,7 @@
     "meta": "Bangkok · Thailand",
     "metaSub": "Real Estate & Legal Counsel · Est. 2018",
     "titleLine1": "Real Estate",
-    "titleLine2": "in Bangkok,",
+    "titleLine2": "in Thailand,",
     "titleLine3": "under the protection of law.",
     "tag": "Full Transaction Support",
     "description": "From the first viewing to handing over the keys. The ALAB legal team handles every transaction personally - in English and Russian.",
@@ -32,6 +35,8 @@
     "forRent": "For Rent",
     "type": "Type",
     "selectType": "Any type",
+    "city": "City",
+    "selectCity": "Any city",
     "district": "District",
     "selectDistrict": "Any district",
     "bedrooms": "Bedrooms",
@@ -199,7 +204,7 @@
     "eyebrow": "Catalog",
     "titleLine1": "A curated edit of",
     "titleLine1Em": "premium",
-    "titleLine2": "properties in Bangkok",
+    "titleLine2": "properties in Thailand",
     "subtitle": "ALAB's hand-picked selection of condominiums, villas and penthouses from vetted developers. Every listing has passed legal review.",
     "moreFilters": "Filters",
     "filters": "Filters",
@@ -228,8 +233,15 @@
       "district": "District",
       "bedrooms": "Bedrooms",
       "anyOption": "Any",
-      "bedroomsAny": "Any"
+      "bedroomsAny": "Any",
+      "city": "City",
+      "cityAny": "Any"
     }
+  },
+
+  "City": {
+    "bangkok": "Bangkok",
+    "pattaya": "Pattaya"
   },
 
   "PropertyDetail": {
@@ -303,6 +315,12 @@
         "title": "Transparent Cost Breakdown",
         "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione.",
         "note": "Transfer Fee · SBT · Stamp Duty"
+      },
+      "crypto": {
+        "tag": "Crypto Transactions",
+        "title": "Crypto-Ready Transactions",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "note": "USDT · BTC · ETH · TRC-20"
       }
     },
     "quote": "Lorem ipsum dolor sit amet — your investment, our legal certainty.",

@@ -10,12 +10,13 @@ import {
   type SortKey,
   mockProperties,
 } from '@/lib/mock-properties';
-import type { Locale, PropertyType, District, OwnershipType, PropertyDeal } from '@/lib/types';
+import type { Locale, PropertyType, District, OwnershipType, PropertyDeal, City } from '@/lib/types';
 import { useCurrency } from './currency-context';
 import { formatPrice } from '@/lib/currency';
 import { PropertyCard } from './property-card';
 
 const TYPES: PropertyType[] = ['condo', 'penthouse', 'villa', 'house', 'townhouse', 'land', 'commercial', 'office', 'retail', 'hotel'];
+const CITIES: City[] = ['bangkok', 'pattaya'];
 const DISTRICTS: District[] = [
   'sukhumvit', 'silom', 'sathorn', 'thonglor', 'phrom-phong', 'asok', 'riverside', 'ari',
 ];
@@ -24,6 +25,7 @@ const PRICE_POINTS = [3_000_000, 5_000_000, 10_000_000, 15_000_000, 25_000_000, 
 
 interface InternalFilters extends PropertyFilters {
   deal?: PropertyDeal;
+  city?: City;
 }
 
 export function PropertyCatalog() {
@@ -31,6 +33,7 @@ export function PropertyCatalog() {
   const tType = useTranslations('PropertyType');
   const tDistrict = useTranslations('District');
   const tOwnership = useTranslations('Ownership');
+  const tCity = useTranslations('City');
   const { currency } = useCurrency();
   const locale = useLocale() as Locale;
 
@@ -48,12 +51,16 @@ export function PropertyCatalog() {
     if (filters.minPriceThb !== undefined || filters.maxPriceThb !== undefined) n++;
     if (filters.ownership) n++;
     if (filters.deal) n++;
+    if (filters.city) n++;
     return n;
   }, [filters]);
 
   const results = useMemo(() => {
     const filtered = filterProperties(filters);
-    return sortProperties(filtered, sortKey);
+    const cityFiltered = filters.city
+      ? filtered.filter((p) => p.city === filters.city || (!p.city && filters.city === 'bangkok'))
+      : filtered;
+    return sortProperties(cityFiltered, sortKey);
   }, [filters, sortKey]);
 
   const reset = () => setFilters({});
@@ -72,6 +79,7 @@ export function PropertyCatalog() {
               options={TYPES.map((v) => ({ value: v, label: tType(v) }))}
               anyLabel={t('filterPanel.anyOption')}
             />
+            
             <ChipSelect
               label={t('filterPanel.district')}
               value={filters.district}
@@ -86,6 +94,7 @@ export function PropertyCatalog() {
               options={BEDROOM_OPTIONS.map((n) => ({ value: n.toString(), label: `${n}+` }))}
               anyLabel={t('filterPanel.bedroomsAny')}
             />
+            
           </div>
 
           {/* More filters button */}
@@ -273,6 +282,7 @@ function FilterPanel({
   const tAmenities = useTranslations('Amenities');
   const tTags = useTranslations('Tags');
   const tDeal = useTranslations('Deal');
+  const tCity = useTranslations('City');
   const { currency } = useCurrency();
 
   return (
@@ -300,6 +310,7 @@ function FilterPanel({
 
         <div className="flex-1 overflow-y-auto px-8 py-8">
 
+
           {/* Type */}
           <FilterGroup label={t('filterPanel.type')}>
             <div className="flex flex-wrap gap-2">
@@ -317,6 +328,23 @@ function FilterPanel({
             </div>
           </FilterGroup>
 
+          {/* City */}
+          <FilterGroup label={t('filterPanel.city')}>
+            <div className="flex flex-wrap gap-2">
+              {CITIES.map((v) => (
+                <PillButton
+                  key={v}
+                  active={filters.city === v}
+                  onClick={() =>
+                    setFilters((f) => ({ ...f, city: f.city === v ? undefined : v }))
+                  }
+                >
+                  {tCity(v)}
+                </PillButton>
+              ))}
+            </div>
+          </FilterGroup>
+          
           {/* District */}
           <FilterGroup label={t('filterPanel.district')}>
             <div className="flex flex-wrap gap-2">
@@ -397,6 +425,8 @@ function FilterPanel({
               ))}
             </div>
           </FilterGroup>
+
+          
         </div>
 
         <div className="flex gap-3 border-t border-[var(--line)] bg-cream-warm/50 px-8 py-5">

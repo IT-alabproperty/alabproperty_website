@@ -151,10 +151,11 @@ function ProposalModal({ property, onClose }: { property?: ProposalProperty; onC
 interface FormData {
   name: string; email: string; phone: string;
   message: string; preferredContact: 'email' | 'phone' | 'whatsapp';
+  cryptoPayment: boolean;
 }
 interface FormErrors { name?: string; email?: string; phone?: string }
 
-const blank: FormData = { name: '', email: '', phone: '', message: '', preferredContact: 'email' };
+const blank: FormData = { name: '', email: '', phone: '', message: '', preferredContact: 'email', cryptoPayment: false };
 
 function ModalForm({ property, onClose }: { property?: ProposalProperty; onClose: () => void }) {
   const t      = useTranslations('Contact');
@@ -198,6 +199,7 @@ function ModalForm({ property, onClose }: { property?: ProposalProperty; onClose
       message: data.message.trim() || defaultMsg,
       propertyId:   property?.id   ?? null,
       propertySlug: property?.slug ?? null,
+      cryptoPayment: data.cryptoPayment,
       submittedAt:  new Date().toISOString(),
     };
     console.log('[ALAB lead]', payload);
@@ -338,6 +340,28 @@ function ModalForm({ property, onClose }: { property?: ProposalProperty; onClose
             className="mfield-input resize-none"
           />
         </MField>
+      </div>
+
+      {/* Crypto payment checkbox */}
+      <div className="mt-5 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => update('cryptoPayment', !data.cryptoPayment)}
+          className={`flex h-5 w-5 shrink-0 items-center justify-center border transition-colors ${
+            data.cryptoPayment
+              ? 'border-teak-deep bg-teak-deep text-cream'
+              : 'border-line text-transparent hover:border-teak-warm'
+          }`}
+          aria-checked={data.cryptoPayment}
+          role="checkbox"
+        >
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+            <path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        <span className="text-[13px] text-teak-warm cursor-pointer select-none" onClick={() => update('cryptoPayment', !data.cryptoPayment)}>
+          {locale === 'ru' ? 'Интересует оплата в криптовалюте' : 'Interested in crypto payment'}
+        </span>
       </div>
 
       {/* Submit */}

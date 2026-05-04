@@ -17,6 +17,7 @@ export const mockProperties: Property[] = [
     },
     type: 'condo',
     district: 'phrom-phong',
+    city: 'bangkok',
     address: {
       ru: 'Сукхумвит 39, Пхром Пхонг, Бангкок',
       en: 'Sukhumvit 39, Phrom Phong, Bangkok',
@@ -66,6 +67,7 @@ export const mockProperties: Property[] = [
     },
     type: 'penthouse',
     district: 'sathorn',
+    city: 'bangkok',
     address: {
       ru: 'Сатхон Роуд, Бангкок',
       en: 'Sathorn Road, Bangkok',
@@ -115,6 +117,7 @@ export const mockProperties: Property[] = [
     },
     type: 'condo',
     district: 'thonglor',
+    city: 'bangkok',
     address: {
       ru: 'Тхонгло Сой 18, Бангкок',
       en: 'Thonglor Soi 18, Bangkok',
@@ -164,6 +167,7 @@ export const mockProperties: Property[] = [
     },
     type: 'villa',
     district: 'riverside',
+    city: 'bangkok',
     address: {
       ru: 'Чароэн Накхон Роуд, Бангкок',
       en: 'Charoen Nakhon Road, Bangkok',
@@ -207,6 +211,7 @@ export const mockProperties: Property[] = [
     },
     type: 'condo',
     district: 'asok',
+    city: 'bangkok',
     address: {
       ru: 'Сукхумвит Сой 21, Бангкок',
       en: 'Sukhumvit Soi 21, Bangkok',
@@ -256,6 +261,7 @@ export const mockProperties: Property[] = [
     },
     type: 'townhouse',
     district: 'silom',
+    city: 'bangkok',
     address: {
       ru: 'Силом Сой 9, Бангкок',
       en: 'Silom Soi 9, Bangkok',

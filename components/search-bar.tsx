@@ -1,12 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Search, ChevronDown, RotateCcw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useCurrency } from './currency-context';
 import { formatPrice } from '@/lib/currency';
 
+// True after first mount — skip intro animation on client-side navigation.
+let searchFirstLoadDone = false;
+
 const types = ['condo', 'villa', 'townhouse', 'penthouse', 'land'] as const;
+const CITIES = ['bangkok', 'pattaya'] as const;
 const districts = ['sukhumvit', 'silom', 'sathorn', 'thonglor', 'phrom-phong', 'asok', 'riverside', 'ari'] as const;
 const bedroomOptions = [1, 2, 3, 4, 5];
 // price points in THB - displayed in selected currency
@@ -16,10 +20,18 @@ export function SearchBar() {
   const t = useTranslations('Search');
   const tType = useTranslations('PropertyType');
   const tDistrict = useTranslations('District');
+  const tCity = useTranslations('City');
   const { currency } = useCurrency();
+
+  const [skipAnim, setSkipAnim] = useState(false);
+  useEffect(() => {
+    if (searchFirstLoadDone) setSkipAnim(true);
+    searchFirstLoadDone = true;
+  }, []);
 
   const [deal] = useState<'sale' | 'rent'>('sale');
   const [type, setType] = useState('');
+  const [city, setCity] = useState('');
   const [district, setDistrict] = useState('');
   const [priceFrom, setPriceFrom] = useState('');
   const [priceTo, setPriceTo] = useState('');
@@ -28,6 +40,7 @@ export function SearchBar() {
 
   const reset = () => {
     setType('');
+    setCity('');
     setDistrict('');
     setPriceFrom('');
     setPriceTo('');
@@ -37,8 +50,8 @@ export function SearchBar() {
 
   return (
     <div
-      className="alab-fade-in alab-search relative z-30 mx-auto w-[calc(100%-32px)] max-w-[1240px] sm:w-[calc(100%-64px)] lg:w-[calc(100%-112px)]"
-      style={{ animationDelay: '1.6s' }}
+      className={`${skipAnim ? '' : 'alab-fade-in'} alab-search relative z-30 mx-auto w-[calc(100%-32px)] max-w-[1240px] sm:w-[calc(100%-64px)] lg:w-[calc(100%-112px)]`}
+      style={skipAnim ? undefined : { animationDelay: '1.6s' }}
     >
       {/* deal tabs */}
       <div className="flex">
@@ -53,12 +66,20 @@ export function SearchBar() {
 
       {/* search panel */}
       <div className="alab-search-panel rounded-r-lg rounded-bl-lg bg-paper/96 p-4 shadow-[0_24px_60px_rgba(0,0,0,0.25)] backdrop-blur-md sm:p-5">
-        {/* Row 1: Type | District | Bedrooms */}
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+        {/* Row 1: Type | City | District | Bedrooms */}
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-4 sm:gap-3">
           <SelectField label={t('type')} value={type} onChange={setType} placeholder={t('selectType')}>
             {types.map((v) => (
               <option key={v} value={v}>
                 {tType(v)}
+              </option>
+            ))}
+          </SelectField>
+
+          <SelectField label={t('city')} value={city} onChange={setCity} placeholder={t('selectCity')}>
+            {CITIES.map((v) => (
+              <option key={v} value={v}>
+                {tCity(v)}
               </option>
             ))}
           </SelectField>
@@ -109,7 +130,7 @@ export function SearchBar() {
             />
           </div>
 
-          {/* Action buttons - row on mobile, beside fields on desktop */}
+          {/* Action buttons */}
           <div className="flex gap-2 sm:items-stretch">
             <button
               type="button"
@@ -154,9 +175,7 @@ export function SearchBar() {
           background: rgb(251, 248, 242);
           color: var(--teak-deep);
         }
-        .alab-search-tab + .alab-search-tab {
-          margin-left: 2px;
-        }
+        .alab-search-tab + .alab-search-tab { margin-left: 2px; }
 
         .alab-search-input-wrap {
           position: relative;
@@ -168,9 +187,7 @@ export function SearchBar() {
           border-radius: 6px;
           min-width: 0;
         }
-        .alab-search-input-wrap:focus-within {
-          border-color: var(--gold-deep);
-        }
+        .alab-search-input-wrap:focus-within { border-color: var(--gold-deep); }
         .alab-search-input-label {
           font-size: 9px;
           letter-spacing: 0.16em;
@@ -198,7 +215,6 @@ export function SearchBar() {
   );
 }
 
-// Reusable select field with consistent label/value styling
 interface SelectFieldProps {
   label: string;
   value: string;

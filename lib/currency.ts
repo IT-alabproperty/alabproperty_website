@@ -10,6 +10,7 @@ export const exchangeRates: Record<Currency, { rate: number; symbol: string }> =
   USD: { rate: 0.0285, symbol: '$' },
   EUR: { rate: 0.0265, symbol: '€' },
   RUB: { rate: 2.45, symbol: '₽' },
+  USDT: { rate: 0.027, symbol: '₮' },
 };
 
 export function convertFromThb(thbAmount: number, target: Currency): number {
@@ -45,4 +46,4 @@ function trimTrailingZeros(s: string): string {
   return s.replace(/\.?0+$/, '');
 }
 
-export const currencyOrder: Currency[] = ['THB', 'USD', 'EUR', 'RUB'];
+export const currencyOrder: Currency[] = ['THB', 'USD', 'EUR', 'RUB', 'USDT'];

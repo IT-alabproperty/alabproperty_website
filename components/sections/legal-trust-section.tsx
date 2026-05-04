@@ -1,19 +1,20 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Building2, ShieldCheck, ListChecks, Receipt } from 'lucide-react';
+import { Building2, ShieldCheck, ListChecks, Receipt, Wallet } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Eyebrow } from '@/components/ui/eyebrow';
 
-type CardKey = 'ownership' | 'dueDiligence' | 'transaction' | 'tax';
+type CardKey = 'ownership' | 'dueDiligence' | 'transaction' | 'tax' | 'crypto';
 
-const CARD_KEYS: CardKey[] = ['ownership', 'dueDiligence', 'transaction', 'tax'];
+const CARD_KEYS: CardKey[] = ['ownership', 'dueDiligence', 'transaction', 'tax', 'crypto'];
 
 const ICONS: Record<CardKey, React.ElementType> = {
   ownership: Building2,
   dueDiligence: ShieldCheck,
   transaction: ListChecks,
   tax: Receipt,
+  crypto: Wallet,
 };
 
 const ease = [0.16, 1, 0.3, 1] as const;
@@ -56,7 +57,7 @@ export function LegalTrustSection() {
         </motion.div>
 
         {/* ── CARD GRID ── */}
-        <div className="grid grid-cols-1 gap-px bg-line sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-px bg-line sm:grid-cols-2 lg:grid-cols-5">
           {CARD_KEYS.map((key, i) => {
             const Icon = ICONS[key];
             return (

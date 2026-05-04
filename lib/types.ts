@@ -3,7 +3,8 @@
 // ============================================================
 
 export type Locale = 'ru' | 'en';
-export type Currency = 'THB' | 'USD' | 'EUR' | 'RUB';
+export type Currency = 'THB' | 'USD' | 'EUR' | 'RUB' | 'USDT';
+export type City = 'bangkok' | 'pattaya';
 
 // ============================================================
 // PROPERTY TYPES
@@ -84,6 +85,8 @@ export interface Property {
   // media
   coverImage: string;
   gallery: string[];
+  // city
+  city?: City;
   // sales
   developer?: LocalizedText;
   completionDate?: string; // off-plan projects

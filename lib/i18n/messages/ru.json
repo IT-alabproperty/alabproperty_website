@@ -2,7 +2,10 @@
   "Nav": {
     "home": "Главная",
     "properties": "Объекты",
-    "legal": "Legal",
+    "business": "Бизнес",
+    "businessFull": "Бизнес и Инвестиции",
+    "blog": "Блог",
+    "legal": "Легальность",
     "company": "Компания",
     "contacts": "Контакты",
     "getOffer": "Получить предложение",
@@ -13,7 +16,7 @@
     "meta": "Bangkok · Thailand",
     "metaSub": "Real Estate & Legal Counsel · Est. 2018",
     "titleLine1": "Недвижимость",
-    "titleLine2": "в Бангкоке,",
+    "titleLine2": "в Тайланде,",
     "titleLine3": "под защитой закона.",
     "tag": "Полное сопровождение",
     "description": "От первого просмотра до получения ключей. Юридическая команда ALAB ведёт каждую сделку лично, на русском и английском.",
@@ -32,6 +35,8 @@
     "forRent": "Аренда",
     "type": "Тип",
     "selectType": "Любой тип",
+    "city": "Город",
+    "selectCity": "Любой город",
     "district": "Район",
     "selectDistrict": "Любой район",
     "bedrooms": "Спальни",
@@ -172,7 +177,7 @@
       "item2Desc": "Договоры, переговоры и регистрация на вашем родном языке - русском или английском. Без посредников, без потери смысла.",
       "item3Title": "От заявки до заселения",
       "item3Desc": "Один партнёр на весь путь. Прозрачные этапы, фиксированная стоимость услуг.",
-      "item4Title": "International Business Investment",
+      "item4Title": "Интернациональные Бизнес Инвестиции",
       "item4Desc": "Помогаем структурировать международные бизнес-активы в Таиланде: корпоративное сопровождение, защита инвестиций."
     },
     "consultNote": "ALAB Consult · Юридическая практика с 2021 года"
@@ -199,7 +204,7 @@
     "eyebrow": "Каталог",
     "titleLine1": "Лента",
     "titleLine1Em": "премиальных",
-    "titleLine2": "объектов в Бангкоке",
+    "titleLine2": "объектов в Тайланде",
     "subtitle": "Подобранная команда ALAB подборка кондоминиумов, вилл и пентхаусов от проверенных застройщиков. Каждый объект прошёл юридическую проверку.",
     "moreFilters": "Фильтры",
     "filters": "Фильтры",
@@ -228,8 +233,15 @@
       "district": "Район",
       "bedrooms": "Спальни",
       "anyOption": "Любой",
-      "bedroomsAny": "Любое"
+      "bedroomsAny": "Любое",
+      "city": "Город",
+      "cityAny": "Любой"
     }
+  },
+
+  "City": {
+    "bangkok": "Бангкок",
+    "pattaya": "Паттайя"
   },
 
   "PropertyDetail": {
@@ -303,6 +315,12 @@
         "title": "Прозрачная структура затрат",
         "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione.",
         "note": "Сбор за перевод · SBT(специальный бизнес-налог) · Гербовый сбор"
+      },
+      "crypto": {
+        "tag": "Крипто-транзакции",
+        "title": "Crypto-Ready Transactions",
+        "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "note": "USDT · BTC · ETH · TRC-20"
       }
     },
     "quote": "Lorem ipsum dolor sit amet — ваши инвестиции, наша правовая гарантия.",

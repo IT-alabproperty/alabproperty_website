@@ -7,6 +7,9 @@ import { useTranslations } from 'next-intl';
 import { Eyebrow } from '@/components/ui/eyebrow';
 import { useProposalModal } from '@/components/proposal-modal';
 
+// True after first mount — skip intro animations on client-side navigation.
+let heroFirstLoadDone = false;
+
 const slides = [
   'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=2400&q=85',
   'https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?w=2400&q=85',
@@ -18,6 +21,12 @@ export function HeroSlideshow() {
   const t = useTranslations('Hero');
   const { open: openModal } = useProposalModal();
   const [active, setActive] = useState(0);
+  // Skip intro animations on client-side navigation (not first page load).
+  const [skipAnim, setSkipAnim] = useState(false);
+  useEffect(() => {
+    if (heroFirstLoadDone) setSkipAnim(true);
+    heroFirstLoadDone = true;
+  }, []);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -73,7 +82,7 @@ export function HeroSlideshow() {
       {/* content */}
       <div className="relative z-[5] flex h-full flex-col justify-between px-6 pb-20 pt-[120px] sm:px-10 sm:pt-[140px] lg:px-14">
         {/* meta - hidden on mobile to save space, visible from sm */}
-        <div className="alab-fade-in hidden items-center justify-between text-[11px] uppercase tracking-[0.2em] text-cream/70 sm:flex" style={{ animationDelay: '0.3s' }}>
+        <div className={`${skipAnim ? '' : 'alab-fade-in'} hidden items-center justify-between text-[11px] uppercase tracking-[0.2em] text-cream/70 sm:flex`} style={skipAnim ? undefined : { animationDelay: '0.3s' }}>
           <span>{t('meta')}</span>
           <div className="mx-8 h-px flex-1 bg-cream/20" />
           <span>{t('metaSub')}</span>
@@ -82,18 +91,18 @@ export function HeroSlideshow() {
         {/* main */}
         <div className="mx-auto sm:mt-16 grid w-full max-w-[1200px] grid-cols-1 items-end gap-10 lg:grid-cols-[1.4fr_1fr] lg:gap-20">
           <h1 className="font-serif text-[clamp(56px,7.5vw,116px)] font-normal leading-[0.95] tracking-[-0.02em] text-cream">
-            <div className="alab-hero-title-line">
+            <div className={skipAnim ? undefined : 'alab-hero-title-line'}>
               <span>{t('titleLine1')}</span>
             </div>
-            <div className="alab-hero-title-line">
+            <div className={skipAnim ? undefined : 'alab-hero-title-line'}>
               <span>{t('titleLine2')}</span>
             </div>
-            <div className="alab-hero-title-line">
+            <div className={skipAnim ? undefined : 'alab-hero-title-line'}>
               <span className="italic font-light text-gold">{t('titleLine3')}</span>
             </div>
           </h1>
 
-          <div className="alab-fade-in pb-2" style={{ animationDelay: '1.4s' }}>
+          <div className={`${skipAnim ? '' : 'alab-fade-in'} pb-2`} style={skipAnim ? undefined : { animationDelay: '1.4s' }}>
             <Eyebrow variant="dark" className="mb-8">
               {t('tag')}
             </Eyebrow>
@@ -121,7 +130,7 @@ export function HeroSlideshow() {
       </div>
 
       {/* slide dots - desktop only */}
-      <div className="alab-fade-in absolute bottom-10 right-14 z-[6] hidden gap-2.5 sm:flex" style={{ animationDelay: '2s' }}>
+      <div className={`${skipAnim ? '' : 'alab-fade-in'} absolute bottom-10 right-14 z-[6] hidden gap-2.5 sm:flex`} style={skipAnim ? undefined : { animationDelay: '2s' }}>
         {slides.map((_, i) => (
           <button
             key={i}

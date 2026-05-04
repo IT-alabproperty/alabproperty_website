@@ -2,18 +2,23 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ArrowRight, Menu, X } from 'lucide-react';
 import { CurrencySwitcher } from './currency-switcher';
 import { LanguageSwitcher } from './language-switcher';
+import { MobileCurrencyPill } from './mobile-currency-pill';
 import { useProposalModal } from './proposal-modal';
 
 export function Nav() {
   const t = useTranslations('Nav');
-  const [scrolled, setScrolled] = useState(false);
+  const pathname = usePathname();
+  const isHome = /^\/(ru|en)?\/?$/.test(pathname);
+  const [scrolled, setScrolled] = useState(!isHome);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
+    if (!isHome) { setScrolled(true); return; }
     const onScroll = () => setScrolled(window.scrollY > 60);
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -42,8 +47,9 @@ export function Nav() {
   const navLinks = [
     { href: '/', label: t('home') },
     { href: '/properties', label: t('properties') },
+    { href: '/business', label: t('business'), mobileLabel: t('businessFull') },
+    { href: '/blog', label: t('blog') },
     { href: '/legal', label: t('legal') },
-    { href: '/company', label: t('company') },
     { href: '/contacts', label: t('contacts') },
   ];
 
@@ -58,12 +64,12 @@ export function Nav() {
         </Link>
 
         {/* desktop links - hidden on mobile */}
-        <ul className="alab-nav-links hidden justify-self-center gap-9 list-none lg:flex">
-          {navLinks.slice(0, 3).map((l) => (
-            <li key={l.href}><Link href={l.href}>{l.label}</Link></li>
+        <ul className="alab-nav-links hidden justify-self-center gap-6 list-none lg:flex xl:gap-8">
+          {navLinks.map((l) => (
+            <li key={l.href} className={l.href === '/contacts' ? 'hidden xl:block' : ''}>
+              <Link href={l.href}>{l.label}</Link>
+            </li>
           ))}
-          <li className="hidden xl:block"><Link href="/company">{t('company')}</Link></li>
-          <li className="hidden xl:block"><Link href="/contacts">{t('contacts')}</Link></li>
         </ul>
 
         {/* spacer for mobile */}
@@ -84,6 +90,9 @@ export function Nav() {
           >
             {t('getOffer')}
           </button>
+
+          {/* Mobile: currency pill */}
+          <MobileCurrencyPill scrolled={scrolled} />
 
           {/* Mobile: icon-only CTA */}
           <button
@@ -126,16 +135,16 @@ export function Nav() {
           </button>
         </div>
 
-        <ul className="mt-16 flex flex-col gap-2 list-none">
+        <ul className="mt-8 flex-1 overflow-y-auto flex flex-col gap-0 list-none">
           {navLinks.map((l, i) => (
             <li key={l.href}>
               <Link
                 href={l.href}
                 onClick={() => setMenuOpen(false)}
-                className="block py-3 font-serif text-[36px] font-normal text-cream transition-colors hover:text-gold"
+                className="block py-3 font-serif text-[32px] font-normal text-cream transition-colors hover:text-gold"
                 style={{ animationDelay: `${0.05 * i}s` }}
               >
-                {l.label}
+                {'mobileLabel' in l ? l.mobileLabel : l.label}
               </Link>
             </li>
           ))}

@@ -28,7 +28,7 @@ export function CurrencyProvider({
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY) as Currency | null;
-      if (saved && ['THB', 'USD', 'EUR', 'RUB'].includes(saved)) {
+      if (saved && ['THB', 'USD', 'EUR', 'RUB', 'USDT'].includes(saved)) {
         setCurrencyState(saved);
       } else {
         // smart default: RU users get RUB, EN users get USD

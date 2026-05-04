@@ -1,15 +1,16 @@
 # ALAB Property
-
+ 
 Premium real estate platform for Bangkok with full legal support. Bilingual (Russian / English) with multi-currency pricing.
 
 ## Stack
-
+ 
 - **Next.js 15** (App Router)
 - **TypeScript**
 - **Tailwind CSS v3.4** (custom theme: teak / cream / gold)
 - **next-intl** for i18n (cookie-based locale, no URL segments yet)
 - **Lucide React** for icons
-
+- 
+0
 ## Getting Started
 
 ```bash

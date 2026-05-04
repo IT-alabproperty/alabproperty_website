@@ -1,9 +1,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
+ 
 @import 'leaflet/dist/leaflet.css';
-
+ 
 /* ============================================================
    BASE
    ============================================================ */
@@ -269,6 +269,14 @@
 .alab-reveal[data-in='true'] {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* After client-side navigation, reveal immediately — including RSC elements
+   that stream in after the initial commit (CSS applies on DOM insertion). */
+body[data-navigated] .alab-reveal {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+  transition: none !important;
 }
 
 /* ============================================================

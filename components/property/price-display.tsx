@@ -14,7 +14,7 @@ export function PriceDisplay({
   areaSqm: number;
 }) {
   const t = useTranslations('Deal');
-  const { format } = useCurrency();
+  const { format, currency } = useCurrency();
 
   const pricePerSqm = priceThb / areaSqm;
 
@@ -29,6 +29,11 @@ export function PriceDisplay({
       <div className="mt-2 text-xs text-muted">
         {format(pricePerSqm)} / m²
       </div>
+      {currency === 'USDT' ? (
+        <div className="mt-2 text-[11px] font-medium uppercase tracking-[0.12em] text-gold-deep">USDT TRC-20</div>
+      ) : (
+        <div className="mt-2 text-[10px] uppercase tracking-[0.1em] text-muted/60">crypto friendly</div>
+      )}
     </div>
   );
 }
