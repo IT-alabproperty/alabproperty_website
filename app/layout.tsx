@@ -27,9 +27,9 @@ const interTight = Inter_Tight({
 });
 
 export const metadata: Metadata = {
-  title: 'ALAB Property · Real Estate & Legal Counsel in Bangkok',
+  title: 'ALAB Property · Real Estate & Legal Counsel in Thailand',
   description:
-    'Premium real estate in Bangkok with full legal support. Bilingual transaction handling in Russian and English.',
+    'Premium real estate in Thailand with full legal support. Bilingual transaction handling in Russian and English.',
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
