@@ -79,7 +79,13 @@ export function PropertyCatalog() {
               options={TYPES.map((v) => ({ value: v, label: tType(v) }))}
               anyLabel={t('filterPanel.anyOption')}
             />
-            
+            <ChipSelect
+              label={t('filterPanel.city')}
+              value={filters.city}
+              onChange={(v) => setFilters((f) => ({ ...f, city: v as City | undefined }))}
+              options={CITIES.map((v) => ({ value: v, label: tCity(v) }))}
+              anyLabel={t('filterPanel.cityAny')}
+            />
             <ChipSelect
               label={t('filterPanel.district')}
               value={filters.district}
@@ -94,7 +100,6 @@ export function PropertyCatalog() {
               options={BEDROOM_OPTIONS.map((n) => ({ value: n.toString(), label: `${n}+` }))}
               anyLabel={t('filterPanel.bedroomsAny')}
             />
-            
           </div>
 
           {/* More filters button */}
