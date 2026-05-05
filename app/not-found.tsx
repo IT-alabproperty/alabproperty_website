@@ -1,6 +1,12 @@
 import Link from 'next/link';
+import { getLocale } from 'next-intl/server';
 
-export default function NotFound() {
+export default async function NotFound() {
+  let isRu = true;
+  try {
+    const locale = await getLocale();
+    isRu = locale === 'ru';
+  } catch { /* outside locale context — default to ru */ }
   return (
     <main
       style={{
@@ -247,9 +253,9 @@ export default function NotFound() {
               animation: 'alab404FadeUp 0.6s ease 1.95s forwards',
             }}
           >
-            Эта страница
+            {isRu ? 'Эта страница' : 'This page'}
             <br />
-            <em>ещё строится</em>
+            <em>{isRu ? 'ещё строится' : 'is coming soon'}</em>
           </p>
 
           {/* gold rule */}
@@ -280,7 +286,7 @@ export default function NotFound() {
               animation: 'alab404FadeUp 0.5s ease 2.3s forwards',
             }}
           >
-            This property is under development
+            {isRu ? 'Эта страница в разработке' : 'This page is under development'}
           </p>
         </div>
 
@@ -302,7 +308,7 @@ export default function NotFound() {
             animation: 'alab404FadeUp 0.5s ease 2.5s forwards',
           }}
         >
-          ← На главную
+          {isRu ? '← На главную' : '← Home'}
         </Link>
       </div>
     </main>
