@@ -30,7 +30,7 @@ export function PriceDisplay({
         {format(pricePerSqm)} / m²
       </div>
       {currency === 'USDT' ? (
-        <div className="mt-2 text-[11px] font-medium uppercase tracking-[0.12em] text-gold-deep">USDT TRC-20</div>
+        <div className="mt-2 text-[11px] font-medium uppercase tracking-[0.12em] text-gold-deep">USDT ERC-20</div>
       ) : (
         <div className="mt-2 text-[10px] uppercase tracking-[0.1em] text-muted/60">crypto friendly</div>
       )}
