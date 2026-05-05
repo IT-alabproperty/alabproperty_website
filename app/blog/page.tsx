@@ -6,8 +6,8 @@ const posts = [
     key: 'pattaya',
     dateRu: '3 мая 2026',
     dateEn: 'May 3, 2026',
-    titleRu: 'Рынок Паттайи: новые возможности для инвесторов',
-    titleEn: 'Pattaya Market: New Opportunities for Investors',
+    titleRu: 'Рынок Бангкока: новые возможности для инвесторов',
+    titleEn: 'Bangkok Market: New Opportunities for Investors',
   },
   {
     key: 'business',
