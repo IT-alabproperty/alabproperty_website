@@ -50,7 +50,6 @@ export function Nav() {
     { href: '/business', label: t('business'), mobileLabel: t('businessFull') },
     { href: '/blog', label: t('blog') },
     { href: '/legal', label: t('legal') },
-    { href: '/contacts', label: t('contacts') },
   ];
 
   return (
