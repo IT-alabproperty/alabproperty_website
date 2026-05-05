@@ -318,7 +318,7 @@
       },
       "crypto": {
         "tag": "Крипто-транзакции",
-        "title": "Crypto-Ready Transactions",
+        "title": "Криптовалютные транзакции",
         "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
         "note": "USDT · BTC · ETH · TRC-20"
       }
