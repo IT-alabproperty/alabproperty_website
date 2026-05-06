@@ -10,7 +10,7 @@ Premium real estate platform for Bangkok with full legal support. Bilingual (Rus
 - **next-intl** for i18n (cookie-based locale, no URL segments yet)
 - **Lucide React** for icons
 - 
- 
+
 ## Getting Started
 
 ```bash
