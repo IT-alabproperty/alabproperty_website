@@ -13,8 +13,8 @@ export async function POST(req: Request) {
       from: 'ALAB Property <noreply@alabproperty.com>',
       to: ['property@alabproperty.com'],
       replyTo: email,
-      subject: `Сообщение с сайта от ${email}`,
-      text: `От: ${email}\n\n${message}`,
+      subject: `New website Letter from ${email}`,
+      text: `From: ${email}\n\n${message}`,
     });
 
     return Response.json({ ok: true });
