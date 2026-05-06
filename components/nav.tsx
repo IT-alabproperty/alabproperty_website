@@ -44,6 +44,8 @@ export function Nav() {
 
   const { open: openModal } = useProposalModal();
 
+  if (pathname.startsWith('/gate')) return null;
+
   const navLinks = [
     { href: '/', label: t('home') },
     { href: '/properties', label: t('properties') },
