@@ -10,16 +10,17 @@ export async function POST(req: Request) {
     }
 
     await resend.emails.send({
-      from: 'ALAB Property Gate <onboarding@resend.dev>',
-      to: 'property@alabproperty.com',
+      from: 'ALAB Property <noreply@alabproperty.com>',
+      to: ['property@alabproperty.com'],
       replyTo: email,
       subject: `Сообщение с сайта от ${email}`,
       text: `От: ${email}\n\n${message}`,
     });
 
     return Response.json({ ok: true });
-  } catch (err) {
-    console.error('[contact]', err);
-    return Response.json({ error: 'Failed to send' }, { status: 500 });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[contact error]', msg);
+    return Response.json({ error: msg }, { status: 500 });
   }
 }
