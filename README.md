@@ -98,3 +98,4 @@ When you wire up a backend / CRM:
 - Add a real form for "Get a Proposal" with validation (e.g. react-hook-form + zod).
 - Run a Lighthouse audit and check Cyrillic rendering across the chosen fonts.
 # alab-property
+# alabproperty_website
