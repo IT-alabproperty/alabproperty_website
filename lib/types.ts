@@ -13,7 +13,7 @@ export type City = 'bangkok' | 'pattaya';
 export type PropertyType = 'condo' | 'villa' | 'townhouse' | 'land' | 'penthouse' | 'house' | 'commercial' | 'office' | 'retail' | 'hotel';
 export type PropertyDeal = 'sale' | 'rent';
 export type OwnershipType = 'freehold' | 'leasehold';
-export type PropertyStatus = 'available' | 'reserved' | 'sold';
+export type PropertyStatus = 'available' | 'reserved' | 'sold' | 'building' | 'soon';
 
 export type District =
   | 'sukhumvit'

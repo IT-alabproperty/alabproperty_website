@@ -96,7 +96,9 @@
   "Status": {
     "available": "Available",
     "reserved": "Reserved",
-    "sold": "Sold"
+    "sold": "Sold",
+    "building": "Under construction",
+    "soon": "Coming soon"
   },
 
   "Tags": {
