@@ -3,16 +3,21 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, ChevronDown, RotateCcw } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import type { Locale } from '@/lib/types';
 import { useCurrency } from './currency-context';
 import { formatPrice } from '@/lib/currency';
+import { supabase } from '@/lib/supabase';
 
 // True after first mount — skip intro animation on client-side navigation.
 let searchFirstLoadDone = false;
 
-const types = ['condo', 'villa', 'townhouse', 'penthouse', 'land'] as const;
-const CITIES = ['bangkok', 'pattaya'] as const;
-const districts = ['sukhumvit', 'silom', 'sathorn', 'thonglor', 'phrom-phong', 'asok', 'riverside', 'ari'] as const;
+// Taxonomies are loaded from Supabase on mount (anon client; RLS allows public SELECT).
+// We use direct Supabase reads (not a server prop) so SearchBar stays a self-contained
+// client component that can be dropped on any page without prop-drilling.
+interface TaxonomyRow { slug: string; name: { ru: string; en: string } }
+interface DistrictRow extends TaxonomyRow { city_slug: string | null }
+
 const bedroomOptions = [1, 2, 3, 4, 5];
 // price points in THB - displayed in selected currency
 const pricePoints = [3_000_000, 5_000_000, 10_000_000, 15_000_000, 25_000_000, 40_000_000, 60_000_000, 100_000_000];
@@ -22,6 +27,7 @@ export function SearchBar() {
   const tType = useTranslations('PropertyType');
   const tDistrict = useTranslations('District');
   const tCity = useTranslations('City');
+  const locale = useLocale() as Locale;
   const { currency } = useCurrency();
   const router = useRouter();
 
@@ -30,6 +36,43 @@ export function SearchBar() {
     if (searchFirstLoadDone) setSkipAnim(true);
     searchFirstLoadDone = true;
   }, []);
+
+  // Dynamic taxonomies
+  const [cities, setCities] = useState<TaxonomyRow[]>([]);
+  const [types, setTypes] = useState<TaxonomyRow[]>([]);
+  const [districts, setDistricts] = useState<DistrictRow[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [c, ty, d] = await Promise.all([
+        supabase.from('taxonomy_cities').select('slug, name').order('slug'),
+        supabase.from('taxonomy_property_types').select('slug, name').order('slug'),
+        supabase.from('taxonomy_districts').select('slug, name, city_slug').order('slug'),
+      ]);
+      if (cancelled) return;
+      if (c.data) setCities(c.data as TaxonomyRow[]);
+      if (ty.data) setTypes(ty.data as TaxonomyRow[]);
+      if (d.data) setDistricts(d.data as DistrictRow[]);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const cityLabel = (slug: string) => {
+    const row = cities.find((c) => c.slug === slug);
+    if (row) return row.name?.[locale] ?? row.name?.ru ?? slug;
+    try { return tCity(slug); } catch { return slug; }
+  };
+  const typeLabel = (slug: string) => {
+    const row = types.find((c) => c.slug === slug);
+    if (row) return row.name?.[locale] ?? row.name?.ru ?? slug;
+    try { return tType(slug); } catch { return slug; }
+  };
+  const districtLabel = (slug: string) => {
+    const row = districts.find((c) => c.slug === slug);
+    if (row) return row.name?.[locale] ?? row.name?.ru ?? slug;
+    try { return tDistrict(slug); } catch { return slug; }
+  };
 
   const [deal] = useState<'sale' | 'rent'>('sale');
   const [type, setType] = useState('');
@@ -89,27 +132,29 @@ export function SearchBar() {
         {/* Row 1: Type | City | District | Bedrooms */}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-4 sm:gap-3">
           <SelectField label={t('type')} value={type} onChange={setType} placeholder={t('selectType')}>
-            {types.map((v) => (
-              <option key={v} value={v}>
-                {tType(v)}
+            {types.map((row) => (
+              <option key={row.slug} value={row.slug}>
+                {typeLabel(row.slug)}
               </option>
             ))}
           </SelectField>
 
           <SelectField label={t('city')} value={city} onChange={setCity} placeholder={t('selectCity')}>
-            {CITIES.map((v) => (
-              <option key={v} value={v}>
-                {tCity(v)}
+            {cities.map((row) => (
+              <option key={row.slug} value={row.slug}>
+                {cityLabel(row.slug)}
               </option>
             ))}
           </SelectField>
 
           <SelectField label={t('district')} value={district} onChange={setDistrict} placeholder={t('selectDistrict')}>
-            {districts.map((v) => (
-              <option key={v} value={v}>
-                {tDistrict(v)}
-              </option>
-            ))}
+            {districts
+              .filter((row) => !city || !row.city_slug || row.city_slug === city)
+              .map((row) => (
+                <option key={row.slug} value={row.slug}>
+                  {districtLabel(row.slug)}
+                </option>
+              ))}
           </SelectField>
 
           <SelectField label={t('bedrooms')} value={bedrooms} onChange={setBedrooms} placeholder={t('anyBedrooms')}>

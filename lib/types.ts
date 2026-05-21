@@ -4,18 +4,12 @@
 
 export type Locale = 'ru' | 'en';
 export type Currency = 'THB' | 'USD' | 'EUR' | 'RUB' | 'USDT';
-export type City = 'bangkok' | 'pattaya';
 
-// ============================================================
-// PROPERTY TYPES
-// ============================================================
-
-export type PropertyType = 'condo' | 'villa' | 'townhouse' | 'land' | 'penthouse' | 'house' | 'commercial' | 'office' | 'retail' | 'hotel';
-export type PropertyDeal = 'sale' | 'rent';
-export type OwnershipType = 'freehold' | 'leasehold';
-export type PropertyStatus = 'available' | 'reserved' | 'sold' | 'building' | 'soon';
-
-export type District =
+// City, PropertyType, District are dynamic (Supabase taxonomy_* tables).
+// KnownXxx literal unions kept only for reference / i18n fallback keys.
+export type KnownCity = 'bangkok' | 'pattaya';
+export type KnownPropertyType = 'condo' | 'villa' | 'townhouse' | 'land' | 'penthouse' | 'house' | 'commercial' | 'office' | 'retail' | 'hotel';
+export type KnownDistrict =
   | 'sukhumvit'
   | 'silom'
   | 'sathorn'
@@ -24,6 +18,18 @@ export type District =
   | 'asok'
   | 'riverside'
   | 'ari';
+
+export type City = string;
+export type PropertyType = string;
+export type District = string;
+
+// ============================================================
+// PROPERTY TYPES
+// ============================================================
+
+export type PropertyDeal = 'sale' | 'rent';
+export type OwnershipType = 'freehold' | 'leasehold';
+export type PropertyStatus = 'available' | 'reserved' | 'sold' | 'building' | 'soon';
 
 export type Amenity =
   | 'pool'

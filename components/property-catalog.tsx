@@ -14,11 +14,10 @@ import { useCurrency } from './currency-context';
 import { formatPrice } from '@/lib/currency';
 import { PropertyCard } from './property-card';
 
-const TYPES: PropertyType[] = ['condo', 'penthouse', 'villa', 'house', 'townhouse', 'land', 'commercial', 'office', 'retail', 'hotel'];
-const CITIES: City[] = ['bangkok', 'pattaya'];
-const DISTRICTS: District[] = [
-  'sukhumvit', 'silom', 'sathorn', 'thonglor', 'phrom-phong', 'asok', 'riverside', 'ari',
-];
+// Dynamic taxonomies — passed in as props from the server component.
+interface TaxonomyRow { slug: string; name: { ru: string; en: string } }
+interface DistrictRow extends TaxonomyRow { city_slug: string | null }
+
 const BEDROOM_OPTIONS = [1, 2, 3, 4, 5];
 const PRICE_POINTS = [3_000_000, 5_000_000, 10_000_000, 15_000_000, 25_000_000, 40_000_000, 60_000_000, 100_000_000];
 
@@ -27,7 +26,17 @@ interface InternalFilters extends PropertyFilters {
   city?: City;
 }
 
-export function PropertyCatalog({ initialProperties }: { initialProperties: Property[] }) {
+export function PropertyCatalog({
+  initialProperties,
+  cities = [],
+  types = [],
+  districts = [],
+}: {
+  initialProperties: Property[];
+  cities?: TaxonomyRow[];
+  types?: TaxonomyRow[];
+  districts?: DistrictRow[];
+}) {
   const t = useTranslations('Catalog');
   const tType = useTranslations('PropertyType');
   const tDistrict = useTranslations('District');
@@ -36,6 +45,24 @@ export function PropertyCatalog({ initialProperties }: { initialProperties: Prop
   const { currency } = useCurrency();
   const locale = useLocale() as Locale;
   const searchParams = useSearchParams();
+
+  // Helper: resolve display label for a taxonomy row in the current locale, fall back to slug.
+  const cityLabel = (slug: string) => {
+    const row = cities.find((c) => c.slug === slug);
+    if (row) return row.name?.[locale] ?? row.name?.ru ?? slug;
+    // Fall back to translation key for legacy seeded slugs
+    try { return tCity(slug); } catch { return slug; }
+  };
+  const typeLabel = (slug: string) => {
+    const row = types.find((c) => c.slug === slug);
+    if (row) return row.name?.[locale] ?? row.name?.ru ?? slug;
+    try { return tType(slug); } catch { return slug; }
+  };
+  const districtLabel = (slug: string) => {
+    const row = districts.find((c) => c.slug === slug);
+    if (row) return row.name?.[locale] ?? row.name?.ru ?? slug;
+    try { return tDistrict(slug); } catch { return slug; }
+  };
 
   const [filters, setFilters] = useState<InternalFilters>({});
   const [codeQuery, setCodeQuery] = useState('');
@@ -129,21 +156,23 @@ export function PropertyCatalog({ initialProperties }: { initialProperties: Prop
               label={t('filterPanel.type')}
               value={filters.type}
               onChange={(v) => setFilters((f) => ({ ...f, type: v as PropertyType | undefined }))}
-              options={TYPES.map((v) => ({ value: v, label: tType(v) }))}
+              options={types.map((row) => ({ value: row.slug, label: typeLabel(row.slug) }))}
               anyLabel={t('filterPanel.anyOption')}
             />
             <ChipSelect
               label={t('filterPanel.city')}
               value={filters.city}
               onChange={(v) => setFilters((f) => ({ ...f, city: v as City | undefined }))}
-              options={CITIES.map((v) => ({ value: v, label: tCity(v) }))}
+              options={cities.map((row) => ({ value: row.slug, label: cityLabel(row.slug) }))}
               anyLabel={t('filterPanel.cityAny')}
             />
             <ChipSelect
               label={t('filterPanel.district')}
               value={filters.district}
               onChange={(v) => setFilters((f) => ({ ...f, district: v as District | undefined }))}
-              options={DISTRICTS.map((v) => ({ value: v, label: tDistrict(v) }))}
+              options={districts
+                .filter((row) => !filters.city || !row.city_slug || row.city_slug === filters.city)
+                .map((row) => ({ value: row.slug, label: districtLabel(row.slug) }))}
               anyLabel={t('filterPanel.anyOption')}
             />
             <ChipSelect
@@ -274,6 +303,12 @@ export function PropertyCatalog({ initialProperties }: { initialProperties: Prop
         filters={filters}
         setFilters={setFilters}
         onReset={reset}
+        cities={cities}
+        types={types}
+        districts={districts}
+        cityLabel={cityLabel}
+        typeLabel={typeLabel}
+        districtLabel={districtLabel}
       />
 
       <style>{`
@@ -333,22 +368,26 @@ function ChipSelect({
 
 function FilterPanel({
   open, onClose, filters, setFilters, onReset,
+  cities, types, districts, cityLabel, typeLabel, districtLabel,
 }: {
   open: boolean;
   onClose: () => void;
   filters: InternalFilters;
   setFilters: React.Dispatch<React.SetStateAction<InternalFilters>>;
   onReset: () => void;
+  cities: TaxonomyRow[];
+  types: TaxonomyRow[];
+  districts: DistrictRow[];
+  cityLabel: (slug: string) => string;
+  typeLabel: (slug: string) => string;
+  districtLabel: (slug: string) => string;
 }) {
   const t = useTranslations('Catalog');
-  const tType = useTranslations('PropertyType');
-  const tDistrict = useTranslations('District');
   const tOwnership = useTranslations('Ownership');
-  const tAmenities = useTranslations('Amenities');
-  const tTags = useTranslations('Tags');
-  const tDeal = useTranslations('Deal');
-  const tCity = useTranslations('City');
   const { currency } = useCurrency();
+  const visibleDistricts = filters.city
+    ? districts.filter((d) => !d.city_slug || d.city_slug === filters.city)
+    : districts;
 
   return (
     <>
@@ -379,15 +418,15 @@ function FilterPanel({
           {/* Type */}
           <FilterGroup label={t('filterPanel.type')}>
             <div className="flex flex-wrap gap-2">
-              {TYPES.map((v) => (
+              {types.map((row) => (
                 <PillButton
-                  key={v}
-                  active={filters.type === v}
+                  key={row.slug}
+                  active={filters.type === row.slug}
                   onClick={() =>
-                    setFilters((f) => ({ ...f, type: f.type === v ? undefined : v }))
+                    setFilters((f) => ({ ...f, type: f.type === row.slug ? undefined : row.slug }))
                   }
                 >
-                  {tType(v)}
+                  {typeLabel(row.slug)}
                 </PillButton>
               ))}
             </div>
@@ -396,32 +435,32 @@ function FilterPanel({
           {/* City */}
           <FilterGroup label={t('filterPanel.city')}>
             <div className="flex flex-wrap gap-2">
-              {CITIES.map((v) => (
+              {cities.map((row) => (
                 <PillButton
-                  key={v}
-                  active={filters.city === v}
+                  key={row.slug}
+                  active={filters.city === row.slug}
                   onClick={() =>
-                    setFilters((f) => ({ ...f, city: f.city === v ? undefined : v }))
+                    setFilters((f) => ({ ...f, city: f.city === row.slug ? undefined : row.slug }))
                   }
                 >
-                  {tCity(v)}
+                  {cityLabel(row.slug)}
                 </PillButton>
               ))}
             </div>
           </FilterGroup>
-          
+
           {/* District */}
           <FilterGroup label={t('filterPanel.district')}>
             <div className="flex flex-wrap gap-2">
-              {DISTRICTS.map((v) => (
+              {visibleDistricts.map((row) => (
                 <PillButton
-                  key={v}
-                  active={filters.district === v}
+                  key={row.slug}
+                  active={filters.district === row.slug}
                   onClick={() =>
-                    setFilters((f) => ({ ...f, district: f.district === v ? undefined : v }))
+                    setFilters((f) => ({ ...f, district: f.district === row.slug ? undefined : row.slug }))
                   }
                 >
-                  {tDistrict(v)}
+                  {districtLabel(row.slug)}
                 </PillButton>
               ))}
             </div>

@@ -2,11 +2,15 @@ import { getTranslations } from 'next-intl/server';
 import { PropertyCatalog } from '@/components/property-catalog';
 import { Eyebrow } from '@/components/ui/eyebrow';
 import { getAllProperties } from '@/lib/db/properties';
+import { getCities, getPropertyTypes, getDistricts } from '@/lib/db/taxonomy';
 
 export default async function PropertiesPage() {
-  const [t, properties] = await Promise.all([
+  const [t, properties, cities, types, districts] = await Promise.all([
     getTranslations('Catalog'),
     getAllProperties(),
+    getCities(),
+    getPropertyTypes(),
+    getDistricts(),
   ]);
 
   return (
@@ -23,7 +27,12 @@ export default async function PropertiesPage() {
         </p>
       </header>
 
-      <PropertyCatalog initialProperties={properties} />
+      <PropertyCatalog
+        initialProperties={properties}
+        cities={cities}
+        types={types}
+        districts={districts}
+      />
     </main>
   );
 }
