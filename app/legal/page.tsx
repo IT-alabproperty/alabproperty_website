@@ -1,6 +1,5 @@
 import { useLocale, useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { mockArticles } from '@/lib/mock-articles';
 import type { Locale } from '@/lib/types';
 import { LegalTrustSection } from '@/components/sections/legal-trust-section';
 

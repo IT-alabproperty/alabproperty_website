@@ -166,6 +166,7 @@ function ModalForm({ property, onClose }: { property?: ProposalProperty; onClose
   const [errors, setErrors]       = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted]  = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const firstRef = useRef<HTMLInputElement>(null);
 
   const propertyName = property ? (property.name[locale] ?? property.name.en) : null;
@@ -194,18 +195,33 @@ function ModalForm({ property, onClose }: { property?: ProposalProperty; onClose
     e.preventDefault();
     if (!validate()) return;
     setSubmitting(true);
+    setSubmitError(null);
     const payload = {
       ...data,
       message: data.message.trim() || defaultMsg,
-      propertyId:   property?.id   ?? null,
-      propertySlug: property?.slug ?? null,
+      propertyId:    property?.id   ?? null,
+      propertyTitle: property ? (property.name[locale] ?? property.name.en) : null,
+      propertySlug:  property?.slug ?? null,
       cryptoPayment: data.cryptoPayment,
-      submittedAt:  new Date().toISOString(),
+      submittedAt:   new Date().toISOString(),
     };
-    console.log('[ALAB lead]', payload);
-    await new Promise(r => setTimeout(r, 800));
-    setSubmitting(false);
-    setSubmitted(true);
+    try {
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error('Failed to submit')
+      setSubmitted(true);
+    } catch {
+      setSubmitError(
+        locale === 'ru'
+          ? 'Не удалось отправить заявку. Попробуйте ещё раз.'
+          : 'Failed to submit. Please try again.'
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // ── success state ──
@@ -376,6 +392,12 @@ function ModalForm({ property, onClose }: { property?: ProposalProperty; onClose
         </button>
         <p className="max-w-[260px] text-[10px] leading-relaxed text-muted/70">{t('privacy')}</p>
       </div>
+      {submitError && (
+        <div className="mt-3 flex items-center gap-1.5 text-[12px] text-red-700">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+          {submitError}
+        </div>
+      )}
 
       <style jsx>{`
         :global(.mfield-input) {

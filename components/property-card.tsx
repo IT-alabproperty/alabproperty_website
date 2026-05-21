@@ -185,8 +185,11 @@ export function PropertyCard({
         {/* details */}
         <div className="flex flex-col justify-between py-2">
           <div>
-            <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-muted">
-              {tDistrict(property.district)} · {tProperty('areaLabel', { n: property.areaSqm })}
+            <div className="mb-2 flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-muted">
+              <span>{tDistrict(property.district)} · {tProperty('areaLabel', { n: property.areaSqm })}</span>
+              {property.code && (
+                <span className="font-mono tracking-[0.2em] text-muted/55">· {property.code}</span>
+              )}
             </div>
             <h3 className="font-serif text-3xl font-normal leading-tight text-teak-deep">
               {property.name[locale]}
@@ -270,6 +273,11 @@ export function PropertyCard({
               <span>·</span>
               <span>{tProperty('floorLabel', { n: property.floor, total: property.totalFloors ?? property.floor })}</span>
             </>
+          )}
+          {property.code && (
+            <span className="ml-auto font-mono text-[10px] tracking-[0.2em] text-muted/60">
+              {property.code}
+            </span>
           )}
         </div>
       </div>

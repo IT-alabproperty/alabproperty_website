@@ -38,6 +38,7 @@ export function ContactForm({ property }: { property: Property }) {
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const validate = (): boolean => {
     const next: FormErrors = {};
@@ -59,25 +60,35 @@ export function ContactForm({ property }: { property: Property }) {
     if (!validate()) return;
 
     setSubmitting(true);
+    setSubmitError(null);
 
-    // ============================================================
-    // TODO: POST to /api/leads when CRM is ready
-    // The payload below matches the expected lead schema.
-    // For now we simulate a 1.2s network round-trip + console.log.
-    // ============================================================
     const payload = {
       propertyId: property.id,
       propertySlug: property.slug,
-      propertyName: property.name[locale],
+      propertyTitle: property.name[locale],
       ...data,
+      preferredContact: data.channel,
       locale,
       submittedAt: new Date().toISOString(),
     };
-    console.log('[ALAB lead]', payload);
-    await new Promise((res) => setTimeout(res, 1200));
 
-    setSubmitting(false);
-    setSuccess(true);
+    try {
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error('Failed to submit');
+      setSuccess(true);
+    } catch {
+      setSubmitError(
+        locale === 'ru'
+          ? 'Не удалось отправить заявку. Попробуйте ещё раз.'
+          : 'Failed to submit. Please try again.'
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (success) {
@@ -184,6 +195,10 @@ export function ContactForm({ property }: { property: Property }) {
           t('submit')
         )}
       </button>
+
+      {submitError && (
+        <p className="mt-4 text-xs text-red-700">{submitError}</p>
+      )}
 
       <p className="mt-4 text-[11px] leading-[1.5] text-muted">{t('privacy')}</p>
 

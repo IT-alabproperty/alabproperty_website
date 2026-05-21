@@ -57,6 +57,8 @@ export interface LocalizedText {
 export interface Property {
   id: string;
   slug: string;
+  // уникальный 4-символьный код объекта (для поиска и менеджеров)
+  code?: string;
   // pricing - all stored in THB, converted on the fly
   priceThb: number;
   deal: PropertyDeal;

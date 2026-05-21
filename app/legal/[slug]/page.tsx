@@ -1,21 +1,22 @@
 import { notFound } from 'next/navigation';
 import { useLocale } from 'next-intl';
-import { getArticleBySlug, mockArticles } from '@/lib/mock-articles';
-import type { Locale } from '@/lib/types';
+import { getArticleBySlug, getAllArticles } from '@/lib/db/articles';
+import type { Locale, Article } from '@/lib/types';
 
-export function generateStaticParams() {
-  return mockArticles.map((a) => ({ slug: a.slug }));
+export async function generateStaticParams() {
+  const articles = await getAllArticles();
+  return articles.map((a) => ({ slug: a.slug }));
 }
 
 export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const article = getArticleBySlug(slug);
+  const article = await getArticleBySlug(slug);
   if (!article) notFound();
 
   return <ArticleContent article={article} />;
 }
 
-function ArticleContent({ article }: { article: ReturnType<typeof getArticleBySlug> & {} }) {
+function ArticleContent({ article }: { article: Article }) {
   const locale = useLocale() as Locale;
 
   return (

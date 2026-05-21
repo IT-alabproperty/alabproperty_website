@@ -1,13 +1,13 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-import { getFeaturedProperties } from '@/lib/mock-properties';
+import { getTranslations } from 'next-intl/server';
+import { getFeaturedProperties } from '@/lib/db/properties';
 import { PropertyCard } from '@/components/property-card';
 import { Eyebrow } from '@/components/ui/eyebrow';
 
-export function FeaturedPropertiesSection() {
-  const t = useTranslations('FeaturedProperties');
-  const properties = getFeaturedProperties(3);
+export async function FeaturedPropertiesSection() {
+  const t = await getTranslations('FeaturedProperties');
+  const properties = await getFeaturedProperties(3);
 
   return (
     <section id="properties" className="relative bg-paper px-6 pb-32 pt-32 sm:px-10 sm:pb-40 sm:pt-40 lg:px-14">

@@ -1,9 +1,13 @@
-import { useTranslations } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
 import { PropertyCatalog } from '@/components/property-catalog';
 import { Eyebrow } from '@/components/ui/eyebrow';
+import { getAllProperties } from '@/lib/db/properties';
 
-export default function PropertiesPage() {
-  const t = useTranslations('Catalog');
+export default async function PropertiesPage() {
+  const [t, properties] = await Promise.all([
+    getTranslations('Catalog'),
+    getAllProperties(),
+  ]);
 
   return (
     <main className="min-h-screen bg-paper px-6 pb-32 pt-32 sm:px-10 sm:pt-40 lg:px-14">
@@ -19,7 +23,7 @@ export default function PropertiesPage() {
         </p>
       </header>
 
-      <PropertyCatalog />
+      <PropertyCatalog initialProperties={properties} />
     </main>
   );
 }

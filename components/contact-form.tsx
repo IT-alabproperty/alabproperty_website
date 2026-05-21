@@ -39,6 +39,7 @@ export function ContactForm({ property }: ContactFormProps) {
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Pre-fill message with property reference
   const defaultMessage = t('defaultMessage', { name: property.name[locale] });
@@ -61,23 +62,34 @@ export function ContactForm({ property }: ContactFormProps) {
     e.preventDefault();
     if (!validate()) return;
     setSubmitting(true);
+    setSubmitError(null);
 
     const payload = {
       ...data,
       message: data.message.trim() || defaultMessage,
       propertyId: property.id,
       propertySlug: property.slug,
+      propertyTitle: property.name[locale],
       submittedAt: new Date().toISOString(),
     };
 
-    // TODO: POST to /api/leads when CRM is ready.
-    // The shape above matches what the CRM endpoint should accept.
-    console.log('[ALAB lead]', payload);
-
-    // Simulate network call
-    await new Promise((r) => setTimeout(r, 700));
-    setSubmitting(false);
-    setSubmitted(true);
+    try {
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error('Failed to submit');
+      setSubmitted(true);
+    } catch {
+      setSubmitError(
+        locale === 'ru'
+          ? 'Не удалось отправить заявку. Попробуйте ещё раз.'
+          : 'Failed to submit. Please try again.'
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (submitted) {
@@ -198,6 +210,13 @@ export function ContactForm({ property }: ContactFormProps) {
         {submitting ? t('submitting') : t('submit')}
         <Send className="h-3.5 w-3.5" strokeWidth={1.75} />
       </button>
+
+      {submitError && (
+        <div className="mt-4 flex items-center gap-1.5 text-[12px] text-red-700">
+          <AlertCircle className="h-3.5 w-3.5" strokeWidth={1.75} />
+          {submitError}
+        </div>
+      )}
 
       <p className="mt-4 text-[11px] leading-relaxed text-muted">
         {t('privacy')}

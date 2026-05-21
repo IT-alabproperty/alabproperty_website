@@ -5,7 +5,7 @@ import {
   ArrowLeft, BedDouble, Bath, Maximize, Building2, Calendar,
   ShieldCheck, Eye, MapPin,
 } from 'lucide-react';
-import { getPropertyBySlug, getRelatedProperties, mockProperties } from '@/lib/mock-properties';
+import { getPropertyBySlug, getRelatedProperties, getAllProperties } from '@/lib/db/properties';
 import { PropertyGallery } from '@/components/property/property-gallery';
 import { RoiCalculator } from '@/components/property/roi-calculator';
 import { ContactForm } from '@/components/property/contact-form';
@@ -14,21 +14,31 @@ import { PropertyCard } from '@/components/property-card';
 import { Eyebrow } from '@/components/ui/eyebrow';
 import { PriceDisplay } from '@/components/property/price-display';
 import { ProposalButton } from '@/components/proposal-button';
+import { ViewTracker } from '@/components/property/view-tracker';
 import type { Locale, Property, Amenity } from '@/lib/types';
 
-export function generateStaticParams() {
-  return mockProperties.map((p) => ({ slug: p.slug }));
+export async function generateStaticParams() {
+  const properties = await getAllProperties();
+  return properties.map((p) => ({ slug: p.slug }));
 }
 
 export default async function PropertyPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const property = getPropertyBySlug(slug);
+  const [property, related] = await Promise.all([
+    getPropertyBySlug(slug),
+    getRelatedProperties(slug, 3),
+  ]);
   if (!property) notFound();
 
-  return <PropertyContent property={property} />;
+  return (
+    <>
+      <ViewTracker slug={property.slug} />
+      <PropertyContent property={property} related={related} />
+    </>
+  );
 }
 
-function PropertyContent({ property }: { property: Property }) {
+function PropertyContent({ property, related }: { property: Property; related: Property[] }) {
   const locale = useLocale() as Locale;
   const t = useTranslations('PropertyPage');
   const tCatalog = useTranslations('Catalog');
@@ -39,8 +49,6 @@ function PropertyContent({ property }: { property: Property }) {
   const tOwnership = useTranslations('Ownership');
   const tTags = useTranslations('Tags');
   const tAmenities = useTranslations('Amenities');
-
-  const related = getRelatedProperties(property.slug, 3);
 
   return (
     <main className="min-h-screen bg-paper pt-28 sm:pt-32">
@@ -79,6 +87,11 @@ function PropertyContent({ property }: { property: Property }) {
               {property.name[locale]}
             </h1>
             <p className="mt-3 text-base text-muted sm:text-lg">{property.address[locale]}</p>
+            {property.code && (
+              <p className="mt-2 font-mono text-[11px] tracking-[0.25em] text-muted/55">
+                {property.code}
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col items-start gap-4 sm:items-end">

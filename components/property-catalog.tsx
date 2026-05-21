@@ -1,16 +1,15 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { LayoutGrid, List, SlidersHorizontal, X, Search } from 'lucide-react';
 import {
-  filterProperties,
   sortProperties,
   type PropertyFilters,
   type SortKey,
-  mockProperties,
-} from '@/lib/mock-properties';
-import type { Locale, PropertyType, District, OwnershipType, PropertyDeal, City } from '@/lib/types';
+} from '@/lib/property-utils';
+import type { Locale, Property, PropertyType, District, OwnershipType, PropertyDeal, City } from '@/lib/types';
 import { useCurrency } from './currency-context';
 import { formatPrice } from '@/lib/currency';
 import { PropertyCard } from './property-card';
@@ -28,7 +27,7 @@ interface InternalFilters extends PropertyFilters {
   city?: City;
 }
 
-export function PropertyCatalog() {
+export function PropertyCatalog({ initialProperties }: { initialProperties: Property[] }) {
   const t = useTranslations('Catalog');
   const tType = useTranslations('PropertyType');
   const tDistrict = useTranslations('District');
@@ -36,11 +35,36 @@ export function PropertyCatalog() {
   const tCity = useTranslations('City');
   const { currency } = useCurrency();
   const locale = useLocale() as Locale;
+  const searchParams = useSearchParams();
 
   const [filters, setFilters] = useState<InternalFilters>({});
+  const [codeQuery, setCodeQuery] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('recommended');
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [panelOpen, setPanelOpen] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(30);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Сидируем фильтры из URL (?code=, ?type=, ?city= и т.д.) один раз при монтировании
+  useEffect(() => {
+    const code = searchParams.get('code');
+    if (code) { setCodeQuery(code.toUpperCase()); return; }
+    const next: InternalFilters = {};
+    const type = searchParams.get('type');
+    const city = searchParams.get('city');
+    const district = searchParams.get('district');
+    const bedrooms = searchParams.get('bedrooms');
+    const priceFrom = searchParams.get('priceFrom');
+    const priceTo = searchParams.get('priceTo');
+    if (type) next.type = type as PropertyType;
+    if (city) next.city = city as City;
+    if (district) next.district = district as District;
+    if (bedrooms) next.bedrooms = +bedrooms;
+    if (priceFrom) next.minPriceThb = +priceFrom;
+    if (priceTo) next.maxPriceThb = +priceTo;
+    if (Object.keys(next).length) setFilters(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Active count for the "more filters" badge
   const activeCount = useMemo(() => {
@@ -56,14 +80,43 @@ export function PropertyCatalog() {
   }, [filters]);
 
   const results = useMemo(() => {
-    const filtered = filterProperties(filters);
-    const cityFiltered = filters.city
-      ? filtered.filter((p) => p.city === filters.city || (!p.city && filters.city === 'bangkok'))
-      : filtered;
-    return sortProperties(cityFiltered, sortKey);
-  }, [filters, sortKey]);
+    const filtered = initialProperties.filter((p) => {
+      if (codeQuery && p.code?.toUpperCase() !== codeQuery) return false;
+      if (filters.type && p.type !== filters.type) return false;
+      if (filters.district && p.district !== filters.district) return false;
+      if (filters.minPriceThb !== undefined && p.priceThb < filters.minPriceThb) return false;
+      if (filters.maxPriceThb !== undefined && p.priceThb > filters.maxPriceThb) return false;
+      if (filters.bedrooms !== undefined && p.bedrooms < filters.bedrooms) return false;
+      if (filters.ownership && p.ownership !== filters.ownership) return false;
+      if (filters.city) {
+        if (!(p.city === filters.city || (!p.city && filters.city === 'bangkok'))) return false;
+      }
+      if ((filters as InternalFilters).deal && p.deal !== (filters as InternalFilters).deal) return false;
+      return true;
+    });
+    return sortProperties(filtered, sortKey);
+  }, [filters, sortKey, initialProperties, codeQuery]);
 
-  const reset = () => setFilters({});
+  // сбрасываем видимые при смене фильтров/сортировки
+  useEffect(() => { setVisibleCount(30); }, [filters, sortKey]);
+
+  // IntersectionObserver — когда sentinel виден, показываем ещё 30
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((n) => n + 30);
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const reset = () => { setFilters({}); setCodeQuery(''); };
 
   return (
     <div>
@@ -188,23 +241,30 @@ export function PropertyCatalog() {
           </button>
         </div>
       ) : (
-        <div
-          className={
-            view === 'grid'
-              ? 'mx-auto grid max-w-[1280px] grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-              : 'mx-auto flex max-w-[1280px] flex-col gap-8'
-          }
-        >
-          {results.map((p) => (
-            <PropertyCard key={p.id} property={p} mode={view} />
-          ))}
-        </div>
-      )}
+        <>
+          <div
+            className={
+              view === 'grid'
+                ? 'mx-auto grid max-w-[1280px] grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                : 'mx-auto flex max-w-[1280px] flex-col gap-8'
+            }
+          >
+            {results.slice(0, visibleCount).map((p) => (
+              <PropertyCard key={p.id} property={p} mode={view} />
+            ))}
+          </div>
 
-      {results.length > 0 && (
-        <div className="mt-20 text-center text-xs uppercase tracking-[0.18em] text-muted">
-          {t('endOfResults')}
-        </div>
+          {/* sentinel — триггер для подгрузки следующих 30 */}
+          {visibleCount < results.length ? (
+            <div ref={sentinelRef} className="mt-20 flex justify-center">
+              <div className="h-1 w-1" aria-hidden />
+            </div>
+          ) : (
+            <div className="mt-20 text-center text-xs uppercase tracking-[0.18em] text-muted">
+              {t('endOfResults')}
+            </div>
+          )}
+        </>
       )}
 
       {/* Slide-over filter panel */}

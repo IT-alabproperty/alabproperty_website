@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Search, ChevronDown, RotateCcw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useCurrency } from './currency-context';
@@ -22,6 +23,7 @@ export function SearchBar() {
   const tDistrict = useTranslations('District');
   const tCity = useTranslations('City');
   const { currency } = useCurrency();
+  const router = useRouter();
 
   const [skipAnim, setSkipAnim] = useState(false);
   useEffect(() => {
@@ -46,6 +48,24 @@ export function SearchBar() {
     setPriceTo('');
     setBedrooms('');
     setCode('');
+  };
+
+  const handleSearch = () => {
+    const params = new URLSearchParams();
+    // код имеет приоритет — это прямой поиск конкретного объекта
+    if (code.trim()) {
+      params.set('code', code.trim().toUpperCase());
+      router.push(`/properties?${params.toString()}`);
+      return;
+    }
+    if (type) params.set('type', type);
+    if (city) params.set('city', city);
+    if (district) params.set('district', district);
+    if (bedrooms) params.set('bedrooms', bedrooms);
+    if (priceFrom) params.set('priceFrom', priceFrom);
+    if (priceTo) params.set('priceTo', priceTo);
+    const qs = params.toString();
+    router.push(qs ? `/properties?${qs}` : '/properties');
   };
 
   return (
@@ -134,6 +154,7 @@ export function SearchBar() {
           <div className="flex gap-2 sm:items-stretch">
             <button
               type="button"
+              onClick={handleSearch}
               className="flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-teak-deep px-6 text-xs font-medium uppercase tracking-[0.14em] text-cream transition-colors duration-400 hover:bg-gold-deep sm:flex-initial sm:px-7"
             >
               <Search className="h-3.5 w-3.5" strokeWidth={1.75} />
