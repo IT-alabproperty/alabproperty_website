@@ -246,7 +246,12 @@ export function PropertyCard({
       style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }}
     >
       <div className="relative mb-5 aspect-[4/5] overflow-hidden rounded">
-        <ImageStack images={images} activeIndex={activeImg} />
+        <ImageStack
+          images={images}
+          activeIndex={activeImg}
+          coverFocus={property.coverFocus}
+          coverZoom={property.coverZoom}
+        />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent from-50% to-ink/70" />
 
         {investorPick && (
@@ -299,21 +304,55 @@ export function PropertyCard({
   );
 }
 
-/** Stacked images that cross-fade. Only the active one is opaque. */
-function ImageStack({ images, activeIndex }: { images: string[]; activeIndex: number }) {
+/** Stacked images that cross-fade. Only the active one is opaque.
+ *  The cover (index 0) honours coverFocus/coverZoom — set in the admin crop UI. */
+function ImageStack({
+  images,
+  activeIndex,
+  coverFocus,
+  coverZoom,
+}: {
+  images: string[];
+  activeIndex: number;
+  coverFocus?: string;
+  coverZoom?: number;
+}) {
+  const zoom = coverZoom && Number.isFinite(coverZoom) ? coverZoom : 1;
+  const position = coverFocus || '50% 50%';
   return (
     <>
-      {images.map((src, i) => (
-        <div
-          key={src}
-          className="absolute inset-0 bg-cover bg-center transition-opacity duration-[888ms] ease-in-out"
-          style={{
-            backgroundImage: `url(${src})`,
-            opacity: i === activeIndex ? 1 : 0,
-          }}
-          aria-hidden={i !== activeIndex}
-        />
-      ))}
+      {images.map((src, i) => {
+        const isCover = i === 0;
+        const isActive = i === activeIndex;
+        if (isCover) {
+          return (
+            <img
+              key={src}
+              src={src}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover transition-opacity duration-[888ms] ease-in-out"
+              style={{
+                opacity: isActive ? 1 : 0,
+                objectPosition: position,
+                transform: `scale(${zoom})`,
+                transformOrigin: position,
+              }}
+              aria-hidden={!isActive}
+            />
+          );
+        }
+        return (
+          <div
+            key={src}
+            className="absolute inset-0 bg-cover bg-center transition-opacity duration-[888ms] ease-in-out"
+            style={{
+              backgroundImage: `url(${src})`,
+              opacity: isActive ? 1 : 0,
+            }}
+            aria-hidden={!isActive}
+          />
+        );
+      })}
     </>
   );
 }

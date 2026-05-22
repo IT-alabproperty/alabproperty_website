@@ -92,6 +92,10 @@ export interface Property {
   tags: PropertyTag[];
   // media
   coverImage: string;
+  /** CSS object-position value, e.g. "50% 30%". Controls cover crop focal point. */
+  coverFocus?: string;
+  /** CSS scale factor for the cover image, 0.5–3. Defaults to 1. */
+  coverZoom?: number;
   gallery: string[];
   // city
   city?: City;

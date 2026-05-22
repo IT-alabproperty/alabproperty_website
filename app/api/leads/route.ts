@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { insertLead } from '@/lib/db/leads'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
@@ -63,48 +64,74 @@ export async function POST(req: NextRequest) {
     console.error('[api/leads] email send failed (lead saved to DB):', msg)
   }
 
-  // 3. Telegram notification — non-fatal too. Sends a direct message to manager.
+  // 3. Telegram notification — non-fatal too. Sends to all users subscribed to 'leads' topic.
   try {
     const botToken = process.env.TELEGRAM_BOT_TOKEN
-    const chatId = process.env.TELEGRAM_CHAT_ID
-    if (botToken && chatId && !botToken.includes('xxxx')) {
-      const tgLines = [
-        `🔔 *Новый лид*`,
-        ``,
-        `*Имя:* ${escapeMd(body.name)}`,
-        `*Email:* ${escapeMd(body.email)}`,
-        body.phone ? `*Телефон:* ${escapeMd(body.phone)}` : null,
-        `*Способ связи:* ${escapeMd(body.preferredContact || 'email')}`,
-        body.propertyTitle ? `*Объект:* ${escapeMd(body.propertyTitle)}` : null,
-        body.propertySlug
-          ? `[Открыть объект](https://alabproperty.com/properties/${body.propertySlug})`
-          : null,
-        body.cryptoPayment ? `💰 *Оплата криптой:* Да` : null,
-        ``,
-        `*Сообщение:*`,
-        escapeMd(body.message || '(пусто)'),
-      ].filter(Boolean).join('\n')
+    if (botToken && !botToken.includes('xxxx')) {
+      // Find all active users whose role subscribes to 'leads' notifications
+      let recipients: Array<{ chat_id: number; lang: 'ru' | 'en' }> = []
+      try {
+        const { data, error } = await supabaseAdmin
+          .from('bot_users')
+          .select('telegram_id, notification_lang, role:roles!inner(notify_topics)')
+          .eq('active', true)
+        if (error) throw error
+        if (data) {
+          recipients = data
+            .filter((u) => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const topics = (u as any).role?.notify_topics as string[] | undefined
+              return Array.isArray(topics) && topics.includes('leads')
+            })
+            .map((u) => ({
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              chat_id: Number((u as any).telegram_id),
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              lang: ((u as any).notification_lang as 'ru' | 'en') ?? 'ru',
+            }))
+        }
+      } catch (e) {
+        console.error('[api/leads] failed to load lead subscribers:', e)
+      }
 
-      // 10-секундный таймаут — не блокируем ответ форме надолго
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 10_000)
-      const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: tgLines,
-          parse_mode: 'Markdown',
-          disable_web_page_preview: true,
-        }),
-        signal: controller.signal,
-      }).finally(() => clearTimeout(timeout))
-      if (!res.ok) {
-        const detail = await res.text().catch(() => '')
-        console.error('[api/leads] telegram send failed:', res.status, detail)
+      // Fallback: env TELEGRAM_CHAT_ID (single recipient) if DB has no subscribers
+      if (recipients.length === 0) {
+        const fallback = process.env.TELEGRAM_CHAT_ID
+        if (fallback) {
+          recipients = [{ chat_id: Number(fallback), lang: 'ru' }]
+        } else {
+          console.warn('[api/leads] no lead subscribers and no TELEGRAM_CHAT_ID — TG skipped')
+        }
+      }
+
+      for (const r of recipients) {
+        const tgLines = buildLeadMessage(body, r.lang)
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 10_000)
+        try {
+          const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: r.chat_id,
+              text: tgLines,
+              parse_mode: 'Markdown',
+              disable_web_page_preview: true,
+            }),
+            signal: controller.signal,
+          })
+          if (!res.ok) {
+            const detail = await res.text().catch(() => '')
+            console.error('[api/leads] telegram send failed:', r.chat_id, res.status, detail)
+          }
+        } catch (e) {
+          console.error('[api/leads] telegram fetch failed:', r.chat_id, e)
+        } finally {
+          clearTimeout(timeout)
+        }
       }
     } else {
-      console.warn('[api/leads] TELEGRAM_BOT_TOKEN/CHAT_ID not configured — TG skipped')
+      console.warn('[api/leads] TELEGRAM_BOT_TOKEN not configured — TG skipped')
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
@@ -112,6 +139,48 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true })
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildLeadMessage(body: any, lang: 'ru' | 'en'): string {
+  if (lang === 'en') {
+    return [
+      `🔔 *New lead*`,
+      ``,
+      `*Name:* ${escapeMd(body.name)}`,
+      `*Email:* ${escapeMd(body.email)}`,
+      body.phone ? `*Phone:* ${escapeMd(body.phone)}` : null,
+      `*Preferred contact:* ${escapeMd(body.preferredContact || 'email')}`,
+      body.propertyTitle ? `*Property:* ${escapeMd(body.propertyTitle)}` : null,
+      body.propertySlug
+        ? `[Open property](https://alabproperty.com/properties/${body.propertySlug})`
+        : null,
+      body.cryptoPayment ? `💰 *Pay in crypto:* Yes` : null,
+      ``,
+      `*Message:*`,
+      escapeMd(body.message || '(empty)'),
+    ]
+      .filter(Boolean)
+      .join('\n')
+  }
+  return [
+    `🔔 *Новый лид*`,
+    ``,
+    `*Имя:* ${escapeMd(body.name)}`,
+    `*Email:* ${escapeMd(body.email)}`,
+    body.phone ? `*Телефон:* ${escapeMd(body.phone)}` : null,
+    `*Способ связи:* ${escapeMd(body.preferredContact || 'email')}`,
+    body.propertyTitle ? `*Объект:* ${escapeMd(body.propertyTitle)}` : null,
+    body.propertySlug
+      ? `[Открыть объект](https://alabproperty.com/properties/${body.propertySlug})`
+      : null,
+    body.cryptoPayment ? `💰 *Оплата криптой:* Да` : null,
+    ``,
+    `*Сообщение:*`,
+    escapeMd(body.message || '(пусто)'),
+  ]
+    .filter(Boolean)
+    .join('\n')
 }
 
 // Markdown V1 — экранируем символы которые ломают форматирование Telegram.

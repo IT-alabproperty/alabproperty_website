@@ -58,6 +58,8 @@ function rowToProperty(row: any): Property {
     amenities: (row.amenities ?? []) as Amenity[],
     tags: (row.tags ?? []) as PropertyTag[],
     coverImage: row.cover_image ?? '',
+    coverFocus: row.cover_focus ?? undefined,
+    coverZoom: row.cover_zoom != null ? Number(row.cover_zoom) : undefined,
     gallery: (row.gallery ?? []) as string[],
     city: row.city ? (row.city as City) : undefined,
     developer: row.developer ? (row.developer as LocalizedText) : undefined,

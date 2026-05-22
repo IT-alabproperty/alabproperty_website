@@ -21,21 +21,24 @@ export function PropertyGallery({ images, name }: { images: string[]; name: stri
   return (
     <>
       {/* Layout */}
-      <div className={`grid grid-cols-1 gap-2 ${hasSideImages ? 'sm:grid-cols-[2fr_1fr]' : ''}`}>
-        {/* Main image */}
-        <button
-          type="button"
-          onClick={() => setLightbox(0)}
-          className="relative aspect-[4/3] overflow-hidden rounded bg-cover bg-center"
-          style={{ backgroundImage: `url(${main})` }}
-          aria-label={`${name} — main photo`}
-        >
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-ink/30 transition-opacity hover:opacity-90" />
-          <span className="absolute bottom-4 left-4 z-[2] flex items-center gap-2 rounded-full bg-paper/95 px-4 py-2 text-xs font-medium uppercase tracking-[0.14em] text-teak">
-            <Maximize2 className="h-3 w-3" strokeWidth={1.75} />
-            {t('showMorePhotos', { count: images.length })}
-          </span>
-        </button>
+      <div className={`grid grid-cols-1 gap-2 ${hasSideImages ? 'sm:grid-cols-[2fr_1fr]' : 'single-photo'}`}>
+        {/* Main image — when there is only one photo we cap its width so it
+            doesn't sprawl across the full container on desktop. */}
+        <div className={hasSideImages ? '' : 'mx-auto w-full sm:max-w-[680px]'}>
+          <button
+            type="button"
+            onClick={() => setLightbox(0)}
+            className="relative block aspect-[4/3] w-full overflow-hidden rounded bg-cover bg-center"
+            style={{ backgroundImage: `url(${main})` }}
+            aria-label={`${name} — main photo`}
+          >
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-ink/30 transition-opacity hover:opacity-90" />
+            <span className="absolute bottom-4 left-4 z-[2] flex items-center gap-2 rounded-full bg-paper/95 px-4 py-2 text-xs font-medium uppercase tracking-[0.14em] text-teak">
+              <Maximize2 className="h-3 w-3" strokeWidth={1.75} />
+              {t('showMorePhotos', { count: images.length })}
+            </span>
+          </button>
+        </div>
 
         {/* Side images */}
         {hasSideImages && (
