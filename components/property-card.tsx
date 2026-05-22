@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { ArrowUpRight } from 'lucide-react';
@@ -324,30 +325,25 @@ function ImageStack({
       {images.map((src, i) => {
         const isCover = i === 0;
         const isActive = i === activeIndex;
-        if (isCover) {
-          return (
-            <img
-              key={src}
-              src={src}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover transition-opacity duration-[888ms] ease-in-out"
-              style={{
-                opacity: isActive ? 1 : 0,
-                objectPosition: position,
-                transform: `scale(${zoom})`,
-                transformOrigin: position,
-              }}
-              aria-hidden={!isActive}
-            />
-          );
-        }
+        // sizes — подсказка браузеру: ширина картинки на разных вьюпортах.
+        // Этого достаточно чтобы Next.js отдавал нужный размер из srcset,
+        // вместо полноразмерного оригинала.
+        const sizes = '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 320px';
         return (
-          <div
+          <Image
             key={src}
-            className="absolute inset-0 bg-cover bg-center transition-opacity duration-[888ms] ease-in-out"
+            src={src}
+            alt=""
+            fill
+            sizes={sizes}
+            priority={isCover && isActive}
+            loading={isCover && isActive ? undefined : 'lazy'}
+            className="object-cover transition-opacity duration-[888ms] ease-in-out"
             style={{
-              backgroundImage: `url(${src})`,
               opacity: isActive ? 1 : 0,
+              objectPosition: isCover ? position : '50% 50%',
+              transform: isCover ? `scale(${zoom})` : undefined,
+              transformOrigin: isCover ? position : undefined,
             }}
             aria-hidden={!isActive}
           />

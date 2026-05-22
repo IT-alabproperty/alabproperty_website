@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { ChevronLeft, ChevronRight, X, Maximize2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -28,10 +29,19 @@ export function PropertyGallery({ images, name }: { images: string[]; name: stri
           <button
             type="button"
             onClick={() => setLightbox(0)}
-            className="relative block aspect-[4/3] w-full overflow-hidden rounded bg-cover bg-center"
-            style={{ backgroundImage: `url(${main})` }}
+            className="relative block aspect-[4/3] w-full overflow-hidden rounded"
             aria-label={`${name} — main photo`}
           >
+            <Image
+              src={main}
+              alt={name}
+              fill
+              sizes={hasSideImages
+                ? '(max-width: 640px) 100vw, 60vw'
+                : '(max-width: 640px) 100vw, 680px'}
+              priority
+              className="object-cover"
+            />
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-ink/30 transition-opacity hover:opacity-90" />
             <span className="absolute bottom-4 left-4 z-[2] flex items-center gap-2 rounded-full bg-paper/95 px-4 py-2 text-xs font-medium uppercase tracking-[0.14em] text-teak">
               <Maximize2 className="h-3 w-3" strokeWidth={1.75} />
@@ -48,10 +58,16 @@ export function PropertyGallery({ images, name }: { images: string[]; name: stri
                 key={src}
                 type="button"
                 onClick={() => setLightbox(i + 1)}
-                className="relative aspect-[4/3] overflow-hidden rounded bg-cover bg-center transition-opacity hover:opacity-95"
-                style={{ backgroundImage: `url(${src})` }}
+                className="relative aspect-[4/3] overflow-hidden rounded transition-opacity hover:opacity-95"
                 aria-label={`${name} — photo ${i + 2}`}
               >
+                <Image
+                  src={src}
+                  alt=""
+                  fill
+                  sizes="(max-width: 640px) 50vw, 280px"
+                  className="object-cover"
+                />
                 {i === 1 && remainingCount > 0 && (
                   <div className="absolute inset-0 flex items-center justify-center bg-ink/55">
                     <span className="font-serif text-3xl font-light text-cream">
@@ -133,18 +149,24 @@ function Lightbox({
 
       <div className="relative flex h-[80vh] w-[90vw] max-w-[1400px] items-center justify-center overflow-hidden rounded-3xl bg-ink/20 shadow-2xl shadow-black/40">
         <div className="absolute inset-0 overflow-hidden">
-          <img
+          <Image
             src={images[index]}
             alt=""
-            className="h-full w-full object-cover blur-2xl opacity-30 scale-105"
+            fill
+            sizes="100vw"
+            className="object-cover blur-2xl opacity-30 scale-105"
+            priority
           />
           <div className="absolute inset-0 bg-ink/30" />
         </div>
 
-        <img
+        <Image
           src={images[index]}
           alt={`Photo ${index + 1}`}
-          className="relative h-full w-full object-contain"
+          fill
+          sizes="(max-width: 1400px) 90vw, 1400px"
+          className="relative object-contain"
+          priority
         />
       </div>
 
