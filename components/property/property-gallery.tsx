@@ -6,23 +6,27 @@ import { useTranslations } from 'next-intl';
 
 export function PropertyGallery({ images, name }: { images: string[]; name: string }) {
   const t = useTranslations('PropertyDetail');
-  const [activeIndex, setActiveIndex] = useState(0);
   const [lightbox, setLightbox] = useState<number | null>(null);
+
+  if (images.length === 0) {
+    return null;
+  }
 
   // Cover layout: 1 large left + 2 small right (desktop)
   const [main, ...rest] = images;
   const sideImages = rest.slice(0, 2);
   const remainingCount = images.length - 3;
+  const hasSideImages = sideImages.length > 0;
 
   return (
     <>
       {/* Layout */}
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr]">
+      <div className={`grid grid-cols-1 gap-2 ${hasSideImages ? 'sm:grid-cols-[2fr_1fr]' : ''}`}>
         {/* Main image */}
         <button
           type="button"
           onClick={() => setLightbox(0)}
-          className="relative aspect-[4/3] overflow-hidden rounded bg-cover bg-center sm:aspect-auto"
+          className="relative aspect-[4/3] overflow-hidden rounded bg-cover bg-center"
           style={{ backgroundImage: `url(${main})` }}
           aria-label={`${name} — main photo`}
         >
@@ -34,26 +38,28 @@ export function PropertyGallery({ images, name }: { images: string[]; name: stri
         </button>
 
         {/* Side images */}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 sm:grid-rows-2">
-          {sideImages.map((src, i) => (
-            <button
-              key={src}
-              type="button"
-              onClick={() => setLightbox(i + 1)}
-              className="relative aspect-[4/3] overflow-hidden rounded bg-cover bg-center transition-opacity hover:opacity-95"
-              style={{ backgroundImage: `url(${src})` }}
-              aria-label={`${name} — photo ${i + 2}`}
-            >
-              {i === 1 && remainingCount > 0 && (
-                <div className="absolute inset-0 flex items-center justify-center bg-ink/55">
-                  <span className="font-serif text-3xl font-light text-cream">
-                    +{remainingCount}
-                  </span>
-                </div>
-              )}
-            </button>
-          ))}
-        </div>
+        {hasSideImages && (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 sm:grid-rows-2">
+            {sideImages.map((src, i) => (
+              <button
+                key={src}
+                type="button"
+                onClick={() => setLightbox(i + 1)}
+                className="relative aspect-[4/3] overflow-hidden rounded bg-cover bg-center transition-opacity hover:opacity-95"
+                style={{ backgroundImage: `url(${src})` }}
+                aria-label={`${name} — photo ${i + 2}`}
+              >
+                {i === 1 && remainingCount > 0 && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-ink/55">
+                    <span className="font-serif text-3xl font-light text-cream">
+                      +{remainingCount}
+                    </span>
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Lightbox */}
@@ -122,10 +128,22 @@ function Lightbox({
         <ChevronLeft className="h-6 w-6" strokeWidth={1.5} />
       </button>
 
-      <div
-        className="relative h-[80vh] w-[90vw] max-w-[1400px] bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${images[index]})` }}
-      />
+      <div className="relative flex h-[80vh] w-[90vw] max-w-[1400px] items-center justify-center overflow-hidden rounded-3xl bg-ink/20 shadow-2xl shadow-black/40">
+        <div className="absolute inset-0 overflow-hidden">
+          <img
+            src={images[index]}
+            alt=""
+            className="h-full w-full object-cover blur-2xl opacity-30 scale-105"
+          />
+          <div className="absolute inset-0 bg-ink/30" />
+        </div>
+
+        <img
+          src={images[index]}
+          alt={`Photo ${index + 1}`}
+          className="relative h-full w-full object-contain"
+        />
+      </div>
 
       <button
         type="button"

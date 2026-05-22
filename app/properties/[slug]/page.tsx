@@ -22,6 +22,19 @@ export async function generateStaticParams() {
   return properties.map((p) => ({ slug: p.slug }));
 }
 
+function translateTaxonomy(
+  translate: (key: string) => string,
+  key: string | null | undefined,
+  fallback: string,
+) {
+  if (!key) return fallback
+  try {
+    return translate(key)
+  } catch {
+    return fallback
+  }
+}
+
 export default async function PropertyPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const [property, related] = await Promise.all([
@@ -50,6 +63,10 @@ function PropertyContent({ property, related }: { property: Property; related: P
   const tTags = useTranslations('Tags');
   const tAmenities = useTranslations('Amenities');
 
+  const districtLabel = translateTaxonomy(tDistrict, property.district, property.district ?? '—');
+  const typeLabel = translateTaxonomy(tType, property.type, property.type ?? '—');
+  const ownershipLabel = translateTaxonomy(tOwnership, property.ownership, property.ownership ?? '—');
+
   return (
     <main className="min-h-screen bg-paper pt-28 sm:pt-32">
       {/* Top bar with back link */}
@@ -70,10 +87,10 @@ function PropertyContent({ property, related }: { property: Property; related: P
             <div className="mb-3 flex flex-wrap items-center gap-3 text-xs font-medium uppercase tracking-[0.18em] text-muted">
               <span className="inline-flex items-center gap-1.5">
                 <MapPin className="h-3 w-3" strokeWidth={2} />
-                {tDistrict(property.district)}
+                {districtLabel}
               </span>
               <span>·</span>
-              <span>{tType(property.type)}</span>
+              <span>{typeLabel}</span>
               {property.tags.includes('investor-pick') && (
                 <>
                   <span>·</span>
@@ -125,8 +142,8 @@ function PropertyContent({ property, related }: { property: Property; related: P
             label={tCatalog('ownership')}
             value={
               property.ownership === 'leasehold' && property.leaseYearsRemaining
-                ? `${tOwnership('leasehold')} (${property.leaseYearsRemaining}y)`
-                : tOwnership(property.ownership)
+                ? `${ownershipLabel} (${property.leaseYearsRemaining}y)`
+                : ownershipLabel
             }
           />
         </div>

@@ -9,6 +9,19 @@ import type { Property, Locale } from '@/lib/types';
 
 type CardMode = 'grid' | 'list';
 
+function translateTaxonomy(
+  translate: (key: string) => string,
+  key: string | null | undefined,
+  fallback: string,
+) {
+  if (!key) return fallback
+  try {
+    return translate(key)
+  } catch {
+    return fallback
+  }
+}
+
 const HOVER_INTERVAL_MS = 1600;
 const TOUCH_HOVER_DELAY_MS = 1400;
 const AUTO_PLAY_VISIBLE_MS = 987;
@@ -125,6 +138,7 @@ export function PropertyCard({
 
   const isAvailable = property.status === 'available';
   const investorPick = property.tags.includes('investor-pick');
+  const districtLabel = translateTaxonomy(tDistrict, property.district, property.district ?? '—');
 
   const onPointerEnter = () => setHovered(true);
   const onPointerLeave = () => setHovered(false);
@@ -186,7 +200,7 @@ export function PropertyCard({
         <div className="flex flex-col justify-between py-2">
           <div>
             <div className="mb-2 flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-muted">
-              <span>{tDistrict(property.district)} · {tProperty('areaLabel', { n: property.areaSqm })}</span>
+              <span>{districtLabel} · {tProperty('areaLabel', { n: property.areaSqm })}</span>
               {property.code && (
                 <span className="font-mono tracking-[0.2em] text-muted/55">· {property.code}</span>
               )}
@@ -246,7 +260,7 @@ export function PropertyCard({
           </span>
         )}
         <span className="absolute left-5 top-5 z-[2] hidden">
-          {tDistrict(property.district)}
+          {districtLabel}
         </span>
 
         <div className="absolute bottom-6 left-6 z-[2] font-serif text-[28px] font-normal leading-none tracking-[-0.01em] text-cream">
@@ -262,7 +276,7 @@ export function PropertyCard({
           {property.name[locale]}
         </div>
         <div className="mb-4 text-[13px] tracking-tight text-muted">
-          {tDistrict(property.district)} · {property.address[locale]}
+          {districtLabel} · {property.address[locale]}
         </div>
         <div className="flex gap-3.5 border-t border-[var(--line)] pt-4 text-xs text-teak-warm">
           <span>{tProperty('bedroomsLabel', { count: property.bedrooms })}</span>
