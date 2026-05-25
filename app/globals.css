@@ -259,6 +259,31 @@
 }
 
 /* ============================================================
+   IMAGE LOADING SKELETON
+   Lightweight shimmer behind <img>/next/Image while it loads.
+   Pure CSS keyframes, GPU-accelerated, no JS loop.
+   ============================================================ */
+@keyframes alab-shimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+.alab-image-skeleton {
+  background-color: var(--cream-warm);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.45) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: alab-shimmer 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .alab-image-skeleton { animation: none; }
+}
+
+/* ============================================================
    SCROLL REVEAL
    ============================================================ */
 .alab-reveal {

@@ -26,6 +26,7 @@ export function BlogCoverImage({
   src, alt, aspectRatio, sizes, priority, coverFocus, coverZoom,
 }: Props) {
   const [broken, setBroken] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   if (broken) {
     return <CoverPlaceholder aspectRatio={aspectRatio} />;
@@ -33,18 +34,22 @@ export function BlogCoverImage({
 
   return (
     <div className="relative w-full overflow-hidden" style={{ aspectRatio }}>
+      {!loaded && (
+        <div className="absolute inset-0 alab-image-skeleton" aria-hidden="true" />
+      )}
       <Image
         src={src}
         alt={alt}
         fill
         priority={priority}
         sizes={sizes}
-        className="object-cover"
+        className={`object-cover transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
         style={{
           objectPosition: coverFocus ?? '50% 50%',
           transform: coverZoom ? `scale(${coverZoom})` : undefined,
           transformOrigin: coverFocus ?? '50% 50%',
         }}
+        onLoad={() => setLoaded(true)}
         onError={() => setBroken(true)}
       />
     </div>

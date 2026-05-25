@@ -312,12 +312,21 @@ function ImageStack({
   const zoom = coverZoom && Number.isFinite(coverZoom) ? coverZoom : 1;
   const position = coverFocus || '50% 50%';
   const [broken, setBroken] = useState<Set<string>>(new Set());
+  // Track which sources have actually loaded so we can hide the skeleton
+  // only when something real is on screen (otherwise the user sees a flash
+  // of empty card while the cover is still in-flight).
+  const [loaded, setLoaded] = useState<Set<string>>(new Set());
 
   const allBroken = images.length > 0 && images.every((src) => !src || broken.has(src));
   if (allBroken) return <ImagePlaceholder />;
 
+  const anyLoaded = images.some((src) => src && loaded.has(src));
+
   return (
     <>
+      {!anyLoaded && (
+        <div className="absolute inset-0 alab-image-skeleton" aria-hidden="true" />
+      )}
       {images.map((src, i) => {
         if (!src || broken.has(src)) return null;
         const isCover = i === 0;
@@ -342,6 +351,14 @@ function ImageStack({
               transform: isCover ? `scale(${zoom})` : undefined,
               transformOrigin: isCover ? position : undefined,
             }}
+            onLoad={() =>
+              setLoaded((prev) => {
+                if (prev.has(src)) return prev;
+                const next = new Set(prev);
+                next.add(src);
+                return next;
+              })
+            }
             onError={() =>
               setBroken((prev) => {
                 if (prev.has(src)) return prev;

@@ -23,6 +23,7 @@ interface Props {
 export function BlogBlockImage({ src, alt }: Props) {
   const [open, setOpen] = useState(false);
   const [broken, setBroken] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   // Lock background scroll while the lightbox is open.
   useEffect(() => {
@@ -64,12 +65,16 @@ export function BlogBlockImage({ src, alt }: Props) {
         className="group relative block w-full overflow-hidden rounded transition-opacity hover:opacity-95"
         style={{ aspectRatio: '16 / 9' }}
       >
+        {!loaded && (
+          <div className="absolute inset-0 alab-image-skeleton" aria-hidden="true" />
+        )}
         <Image
           src={src}
           alt={alt}
           fill
           sizes="(min-width: 1024px) 820px, 100vw"
-          className="object-cover"
+          className={`object-cover transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+          onLoad={() => setLoaded(true)}
           onError={() => setBroken(true)}
         />
         <span className="pointer-events-none absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-ink/55 text-cream opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
