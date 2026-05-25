@@ -21,10 +21,17 @@ export function ScrollRevealMount() {
 
   // First load only: scroll-triggered reveal via IntersectionObserver.
   // body[data-navigated] is NOT set here, so the normal scroll animation runs.
+  //
+  // RSC streaming inserts .alab-reveal elements *after* the initial paint
+  // (e.g. FeaturedPropertiesSection waits on Supabase). We use a MutationObserver
+  // to pick those up as they arrive, otherwise they stay opacity:0 forever and
+  // look like an empty block. A 4s safety net forces anything still unrevealed
+  // visible so a slow network never leaves a hole in the page.
   useEffect(() => {
     if (firstLoadDone) return;
     firstLoadDone = true;
 
+    const observed = new WeakSet<Element>();
     const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((e, i) => {
@@ -38,14 +45,40 @@ export function ScrollRevealMount() {
       { threshold: 0.12 },
     );
 
-    const rafId = requestAnimationFrame(() => {
-      document.querySelectorAll<HTMLElement>('.alab-reveal').forEach((el) => {
-        io.observe(el);
-      });
+    const attach = (el: Element) => {
+      if (observed.has(el)) return;
+      observed.add(el);
+      io.observe(el);
+    };
+
+    const scan = () => {
+      document.querySelectorAll<HTMLElement>('.alab-reveal').forEach(attach);
+    };
+
+    const rafId = requestAnimationFrame(scan);
+
+    const mo = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        m.addedNodes.forEach((node) => {
+          if (!(node instanceof HTMLElement)) return;
+          if (node.classList?.contains('alab-reveal')) attach(node);
+          node.querySelectorAll?.<HTMLElement>('.alab-reveal').forEach(attach);
+        });
+      }
     });
+    mo.observe(document.body, { childList: true, subtree: true });
+
+    // Safety net: anything still hidden 4s after first paint gets forced on.
+    const safety = window.setTimeout(() => {
+      document.querySelectorAll<HTMLElement>('.alab-reveal:not([data-in])').forEach((el) => {
+        el.setAttribute('data-in', 'true');
+      });
+    }, 4000);
 
     return () => {
       cancelAnimationFrame(rafId);
+      window.clearTimeout(safety);
+      mo.disconnect();
       io.disconnect();
     };
   }, []);

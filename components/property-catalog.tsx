@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
-import { LayoutGrid, List, SlidersHorizontal, X, Search } from 'lucide-react';
+import { LayoutGrid, List, SlidersHorizontal, X, Search, ChevronDown } from 'lucide-react';
 import {
   sortProperties,
   type PropertyFilters,
@@ -93,6 +93,51 @@ export function PropertyCatalog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Slugs that actually appear in the current dataset — used to hide
+  // taxonomy options that would yield zero results. Districts are scoped
+  // to the currently-selected city so users only see meaningful choices.
+  const usedTypes = useMemo(
+    () => new Set(initialProperties.map((p) => p.type).filter(Boolean) as string[]),
+    [initialProperties],
+  );
+  const usedCities = useMemo(
+    () =>
+      new Set(
+        initialProperties
+          .map((p) => p.city ?? 'bangkok')
+          .filter(Boolean) as string[],
+      ),
+    [initialProperties],
+  );
+  const usedDistricts = useMemo(
+    () =>
+      new Set(
+        initialProperties
+          .filter((p) => !filters.city || (p.city ?? 'bangkok') === filters.city)
+          .map((p) => p.district)
+          .filter(Boolean) as string[],
+      ),
+    [initialProperties, filters.city],
+  );
+
+  const visibleTypes = useMemo(
+    () => types.filter((row) => usedTypes.has(row.slug)),
+    [types, usedTypes],
+  );
+  const visibleCities = useMemo(
+    () => cities.filter((row) => usedCities.has(row.slug)),
+    [cities, usedCities],
+  );
+  const visibleDistricts = useMemo(
+    () =>
+      districts.filter(
+        (row) =>
+          (!filters.city || !row.city_slug || row.city_slug === filters.city) &&
+          usedDistricts.has(row.slug),
+      ),
+    [districts, filters.city, usedDistricts],
+  );
+
   // Active count for the "more filters" badge
   const activeCount = useMemo(() => {
     let n = 0;
@@ -156,23 +201,21 @@ export function PropertyCatalog({
               label={t('filterPanel.type')}
               value={filters.type}
               onChange={(v) => setFilters((f) => ({ ...f, type: v as PropertyType | undefined }))}
-              options={types.map((row) => ({ value: row.slug, label: typeLabel(row.slug) }))}
+              options={visibleTypes.map((row) => ({ value: row.slug, label: typeLabel(row.slug) }))}
               anyLabel={t('filterPanel.anyOption')}
             />
             <ChipSelect
               label={t('filterPanel.city')}
               value={filters.city}
               onChange={(v) => setFilters((f) => ({ ...f, city: v as City | undefined }))}
-              options={cities.map((row) => ({ value: row.slug, label: cityLabel(row.slug) }))}
+              options={visibleCities.map((row) => ({ value: row.slug, label: cityLabel(row.slug) }))}
               anyLabel={t('filterPanel.cityAny')}
             />
             <ChipSelect
               label={t('filterPanel.district')}
               value={filters.district}
               onChange={(v) => setFilters((f) => ({ ...f, district: v as District | undefined }))}
-              options={districts
-                .filter((row) => !filters.city || !row.city_slug || row.city_slug === filters.city)
-                .map((row) => ({ value: row.slug, label: districtLabel(row.slug) }))}
+              options={visibleDistricts.map((row) => ({ value: row.slug, label: districtLabel(row.slug) }))}
               anyLabel={t('filterPanel.anyOption')}
             />
             <ChipSelect
@@ -220,20 +263,27 @@ export function PropertyCatalog({
         </div>
         <div className="flex items-center gap-3">
           {/* Sort */}
-          <select
-            value={sortKey}
-            onChange={(e) => setSortKey(e.target.value as SortKey)}
-            className="rounded-md border border-[var(--line-strong)] bg-paper px-3 py-2 text-xs uppercase tracking-[0.1em] text-teak outline-none transition-colors focus:border-gold-deep"
-          >
-            <option value="recommended">{t('sort.newest')}</option>
-            <option value="newest">{t('sort.newest')}</option>
-            <option value="price-asc">{t('sort.priceAsc')}</option>
-            <option value="price-desc">{t('sort.priceDesc')}</option>
-            <option value="area-desc">{t('sort.areaDesc')}</option>
-          </select>
+          <div className="relative flex h-9 items-center rounded-md border border-[var(--line-strong)] bg-paper px-1">
+            <select
+              value={sortKey}
+              onChange={(e) => setSortKey(e.target.value as SortKey)}
+              aria-label={t('sort.newest')}
+              className="alab-sort-select h-7 appearance-none rounded bg-transparent pl-2.5 pr-7 text-xs uppercase tracking-[0.1em] text-teak outline-none"
+            >
+              <option value="recommended">{t('sort.newest')}</option>
+              <option value="newest">{t('sort.newest')}</option>
+              <option value="price-asc">{t('sort.priceAsc')}</option>
+              <option value="price-desc">{t('sort.priceDesc')}</option>
+              <option value="area-desc">{t('sort.areaDesc')}</option>
+            </select>
+            <ChevronDown
+              className="pointer-events-none absolute right-2.5 h-3.5 w-3.5 text-muted"
+              strokeWidth={1.75}
+            />
+          </div>
 
           {/* View toggle */}
-          <div className="flex rounded-md border border-[var(--line-strong)] bg-paper p-1">
+          <div className="flex h-9 items-center rounded-md border border-[var(--line-strong)] bg-paper p-1">
             <button
               type="button"
               onClick={() => setView('grid')}
@@ -303,9 +353,9 @@ export function PropertyCatalog({
         filters={filters}
         setFilters={setFilters}
         onReset={reset}
-        cities={cities}
-        types={types}
-        districts={districts}
+        cities={visibleCities}
+        types={visibleTypes}
+        districts={visibleDistricts}
         cityLabel={cityLabel}
         typeLabel={typeLabel}
         districtLabel={districtLabel}
@@ -318,6 +368,10 @@ export function PropertyCatalog({
           background: var(--teak);
           color: var(--cream);
         }
+        /* Sort select: keep the chip silent — no focus ring, no native dropdown arrow */
+        .alab-sort-select::-ms-expand { display: none; }
+        .alab-sort-select { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
+        .alab-sort-select:focus { outline: none; box-shadow: none; }
       `}</style>
     </div>
   );

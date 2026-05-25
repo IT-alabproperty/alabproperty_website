@@ -355,5 +355,14 @@
       "emailInvalid": "Please enter a valid email",
       "phoneInvalid": "Please check your phone format"
     }
+  },
+  "Blog": {
+    "eyebrow": "Blog",
+    "titleLine1": "Market",
+    "titleLine2Em": "Insights",
+    "empty": "No posts yet.",
+    "readMore": "Read more",
+    "photoSoon": "Photo coming soon",
+    "back": "Back to blog"
   }
 }

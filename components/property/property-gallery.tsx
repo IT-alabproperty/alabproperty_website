@@ -2,15 +2,33 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight, X, Maximize2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Maximize2, ImageOff } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-export function PropertyGallery({ images, name }: { images: string[]; name: string }) {
+export function PropertyGallery({ images: rawImages, name }: { images: string[]; name: string }) {
   const t = useTranslations('PropertyDetail');
   const [lightbox, setLightbox] = useState<number | null>(null);
+  // Drop images whose URLs fail to load (blocked CDN, expired link, etc.)
+  const [broken, setBroken] = useState<Set<string>>(new Set());
+  const markBroken = (src: string) =>
+    setBroken((prev) => {
+      if (prev.has(src)) return prev;
+      const next = new Set(prev);
+      next.add(src);
+      return next;
+    });
+
+  const images = rawImages.filter((src) => src && !broken.has(src));
 
   if (images.length === 0) {
-    return null;
+    return (
+      <div className="relative flex aspect-[16/9] w-full items-center justify-center gap-2 rounded bg-cream-warm text-teak/30">
+        <ImageOff className="h-8 w-8" strokeWidth={1.25} />
+        <span className="text-[11px] font-medium uppercase tracking-[0.22em]">
+          ALAB Property
+        </span>
+      </div>
+    );
   }
 
   // Cover layout: 1 large left + 2 small right (desktop)
@@ -41,6 +59,7 @@ export function PropertyGallery({ images, name }: { images: string[]; name: stri
                 : '(max-width: 640px) 100vw, 680px'}
               priority
               className="object-cover"
+              onError={() => markBroken(main)}
             />
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-ink/30 transition-opacity hover:opacity-90" />
             <span className="absolute bottom-4 left-4 z-[2] flex items-center gap-2 rounded-full bg-paper/95 px-4 py-2 text-xs font-medium uppercase tracking-[0.14em] text-teak">
@@ -67,6 +86,7 @@ export function PropertyGallery({ images, name }: { images: string[]; name: stri
                   fill
                   sizes="(max-width: 640px) 50vw, 280px"
                   className="object-cover"
+                  onError={() => markBroken(src)}
                 />
                 {i === 1 && remainingCount > 0 && (
                   <div className="absolute inset-0 flex items-center justify-center bg-ink/55">

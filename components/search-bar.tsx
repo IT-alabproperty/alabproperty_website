@@ -41,19 +41,31 @@ export function SearchBar() {
   const [cities, setCities] = useState<TaxonomyRow[]>([]);
   const [types, setTypes] = useState<TaxonomyRow[]>([]);
   const [districts, setDistricts] = useState<DistrictRow[]>([]);
+  // Slugs that have at least one property — used to hide options that
+  // would yield zero matches.
+  const [usedTypes, setUsedTypes] = useState<Set<string>>(new Set());
+  const [usedCities, setUsedCities] = useState<Set<string>>(new Set());
+  const [usedDistricts, setUsedDistricts] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [c, ty, d] = await Promise.all([
+      const [c, ty, d, props] = await Promise.all([
         supabase.from('taxonomy_cities').select('slug, name').order('slug'),
         supabase.from('taxonomy_property_types').select('slug, name').order('slug'),
         supabase.from('taxonomy_districts').select('slug, name, city_slug').order('slug'),
+        supabase.from('properties').select('type, city, district'),
       ]);
       if (cancelled) return;
       if (c.data) setCities(c.data as TaxonomyRow[]);
       if (ty.data) setTypes(ty.data as TaxonomyRow[]);
       if (d.data) setDistricts(d.data as DistrictRow[]);
+      if (props.data) {
+        const rows = props.data as { type: string | null; city: string | null; district: string | null }[];
+        setUsedTypes(new Set(rows.map((r) => r.type).filter(Boolean) as string[]));
+        setUsedCities(new Set(rows.map((r) => r.city ?? 'bangkok').filter(Boolean) as string[]));
+        setUsedDistricts(new Set(rows.map((r) => r.district).filter(Boolean) as string[]));
+      }
     })();
     return () => { cancelled = true; };
   }, []);
@@ -132,24 +144,29 @@ export function SearchBar() {
         {/* Row 1: Type | City | District | Bedrooms */}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-4 sm:gap-3">
           <SelectField label={t('type')} value={type} onChange={setType} placeholder={t('selectType')}>
-            {types.map((row) => (
-              <option key={row.slug} value={row.slug}>
-                {typeLabel(row.slug)}
-              </option>
-            ))}
+            {types
+              .filter((row) => usedTypes.size === 0 || usedTypes.has(row.slug))
+              .map((row) => (
+                <option key={row.slug} value={row.slug}>
+                  {typeLabel(row.slug)}
+                </option>
+              ))}
           </SelectField>
 
           <SelectField label={t('city')} value={city} onChange={setCity} placeholder={t('selectCity')}>
-            {cities.map((row) => (
-              <option key={row.slug} value={row.slug}>
-                {cityLabel(row.slug)}
-              </option>
-            ))}
+            {cities
+              .filter((row) => usedCities.size === 0 || usedCities.has(row.slug))
+              .map((row) => (
+                <option key={row.slug} value={row.slug}>
+                  {cityLabel(row.slug)}
+                </option>
+              ))}
           </SelectField>
 
           <SelectField label={t('district')} value={district} onChange={setDistrict} placeholder={t('selectDistrict')}>
             {districts
               .filter((row) => !city || !row.city_slug || row.city_slug === city)
+              .filter((row) => usedDistricts.size === 0 || usedDistricts.has(row.slug))
               .map((row) => (
                 <option key={row.slug} value={row.slug}>
                   {districtLabel(row.slug)}

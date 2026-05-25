@@ -355,5 +355,14 @@
       "emailInvalid": "Введите корректный email",
       "phoneInvalid": "Проверьте формат телефона"
     }
+  },
+  "Blog": {
+    "eyebrow": "Блог",
+    "titleLine1": "Актуально",
+    "titleLine2Em": "о рынке",
+    "empty": "Пока нет статей.",
+    "readMore": "Читать далее",
+    "photoSoon": "Фото скоро",
+    "back": "Назад к блогу"
   }
 }

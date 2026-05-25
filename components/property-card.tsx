@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, ImageOff } from 'lucide-react';
 import { useCurrency } from './currency-context';
 import type { Property, Locale } from '@/lib/types';
 
@@ -306,7 +306,10 @@ export function PropertyCard({
 }
 
 /** Stacked images that cross-fade. Only the active one is opaque.
- *  The cover (index 0) honours coverFocus/coverZoom — set in the admin crop UI. */
+ *  The cover (index 0) honours coverFocus/coverZoom — set in the admin crop UI.
+ *  If an image fails to load (network issue, blocked CDN, expired URL), we drop
+ *  it from the stack so the user sees the on-brand placeholder instead of the
+ *  browser's broken-image glyph. */
 function ImageStack({
   images,
   activeIndex,
@@ -320,9 +323,15 @@ function ImageStack({
 }) {
   const zoom = coverZoom && Number.isFinite(coverZoom) ? coverZoom : 1;
   const position = coverFocus || '50% 50%';
+  const [broken, setBroken] = useState<Set<string>>(new Set());
+
+  const allBroken = images.length > 0 && images.every((src) => !src || broken.has(src));
+  if (allBroken) return <ImagePlaceholder />;
+
   return (
     <>
       {images.map((src, i) => {
+        if (!src || broken.has(src)) return null;
         const isCover = i === 0;
         const isActive = i === activeIndex;
         // sizes — подсказка браузеру: ширина картинки на разных вьюпортах.
@@ -345,11 +354,34 @@ function ImageStack({
               transform: isCover ? `scale(${zoom})` : undefined,
               transformOrigin: isCover ? position : undefined,
             }}
+            onError={() =>
+              setBroken((prev) => {
+                if (prev.has(src)) return prev;
+                const next = new Set(prev);
+                next.add(src);
+                return next;
+              })
+            }
             aria-hidden={!isActive}
           />
         );
       })}
     </>
+  );
+}
+
+/** On-brand cover placeholder shown when no usable image can be loaded. */
+function ImagePlaceholder() {
+  return (
+    <div
+      className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-cream-warm text-teak/30"
+      aria-hidden="true"
+    >
+      <ImageOff className="h-7 w-7" strokeWidth={1.25} />
+      <span className="text-[10px] font-medium uppercase tracking-[0.22em]">
+        ALAB Property
+      </span>
+    </div>
   );
 }
 
