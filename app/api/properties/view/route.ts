@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHash } from 'crypto'
 import { supabase } from '@/lib/supabase'
+import { makeLimiter, rateLimit, clientIp } from '@/lib/rate-limit'
+
+// 30 views per IP per minute. Legit user clicks through a few cards then opens
+// one detail page — they won't hit this. Anything above is a counter-pumping
+// script and gets dropped (returns ok:true so we don't reveal the limit).
+const limiter = makeLimiter('view', 30, '1 m')
+
+const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,119}$/
 
 /**
  * Записывает просмотр объекта.
@@ -8,17 +16,20 @@ import { supabase } from '@/lib/supabase'
  */
 export async function POST(req: NextRequest) {
   try {
+    const ip = clientIp(req)
+    const rl = await rateLimit(limiter, ip)
+    if (!rl.ok) {
+      // Pretend we saved it — don't leak the rate-limit to scrapers.
+      return NextResponse.json({ ok: true, throttled: true })
+    }
+
     const body = await req.json().catch(() => ({}))
     const slug = typeof body?.slug === 'string' ? body.slug : null
-    if (!slug) {
+    if (!slug || !SLUG_RE.test(slug)) {
       return NextResponse.json({ error: 'slug required' }, { status: 400 })
     }
 
-    // IP из заголовков прокси (Vercel/CDN). Хешируем — сырой IP не храним.
-    const ip =
-      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      req.headers.get('x-real-ip') ||
-      'unknown'
+    // Хешируем IP — сырой IP не храним (PII).
     const ipHash = createHash('sha256').update(ip).digest('hex').slice(0, 32)
 
     const locale = typeof body?.locale === 'string' ? body.locale.slice(0, 5) : null

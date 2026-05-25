@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { insertLead } from '@/lib/db/leads'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { makeLimiter, rateLimit, clientIp } from '@/lib/rate-limit'
+
+// 5 leads per IP every 10 minutes. Anything beyond that is almost certainly a
+// bot — a real client doesn't submit the contact form six times.
+const limiter = makeLimiter('lead', 5, '10 m')
 
 // Hard caps prevent abuse: someone POST-ing a 10 MB "message" would otherwise
 // blow up Resend / Telegram and burn through quotas. Numbers chosen well above
@@ -77,6 +82,15 @@ function validate(raw: unknown): { ok: true; data: CleanLead } | { ok: false; er
 }
 
 export async function POST(req: NextRequest) {
+  const ip = clientIp(req)
+  const rl = await rateLimit(limiter, ip)
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: 'too many requests, try again later' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } },
+    )
+  }
+
   let raw: unknown
   try { raw = await req.json() } catch {
     return NextResponse.json({ error: 'invalid json' }, { status: 400 })
