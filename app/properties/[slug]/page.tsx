@@ -15,24 +15,12 @@ import { Eyebrow } from '@/components/ui/eyebrow';
 import { PriceDisplay } from '@/components/property/price-display';
 import { ProposalButton } from '@/components/proposal-button';
 import { ViewTracker } from '@/components/property/view-tracker';
+import { useTaxonomyLabels } from '@/components/taxonomy-context';
 import type { Locale, Property, Amenity } from '@/lib/types';
 
 export async function generateStaticParams() {
   const properties = await getAllProperties();
   return properties.map((p) => ({ slug: p.slug }));
-}
-
-function translateTaxonomy(
-  translate: (key: string) => string,
-  key: string | null | undefined,
-  fallback: string,
-) {
-  if (!key) return fallback
-  try {
-    return translate(key)
-  } catch {
-    return fallback
-  }
 }
 
 export default async function PropertyPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -55,17 +43,19 @@ function PropertyContent({ property, related }: { property: Property; related: P
   const locale = useLocale() as Locale;
   const t = useTranslations('PropertyPage');
   const tCatalog = useTranslations('Catalog');
-  const tDistrict = useTranslations('District');
-  const tType = useTranslations('PropertyType');
   const tDeal = useTranslations('Deal');
   const tProperty = useTranslations('Property');
   const tOwnership = useTranslations('Ownership');
   const tTags = useTranslations('Tags');
   const tAmenities = useTranslations('Amenities');
+  const { districtLabel: lookupDistrict, typeLabel: lookupType } = useTaxonomyLabels();
 
-  const districtLabel = translateTaxonomy(tDistrict, property.district, property.district ?? '—');
-  const typeLabel = translateTaxonomy(tType, property.type, property.type ?? '—');
-  const ownershipLabel = translateTaxonomy(tOwnership, property.ownership, property.ownership ?? '—');
+  const districtLabel = lookupDistrict(property.district) || (property.district ?? '—');
+  const typeLabel = lookupType(property.type) || (property.type ?? '—');
+  const ownershipLabel = (() => {
+    try { return property.ownership ? tOwnership(property.ownership) : '—'; }
+    catch { return property.ownership ?? '—'; }
+  })();
 
   return (
     <main className="min-h-screen bg-paper pt-28 sm:pt-32">

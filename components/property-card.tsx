@@ -6,22 +6,10 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { ArrowUpRight, ImageOff } from 'lucide-react';
 import { useCurrency } from './currency-context';
+import { useTaxonomyLabels } from './taxonomy-context';
 import type { Property, Locale } from '@/lib/types';
 
 type CardMode = 'grid' | 'list';
-
-function translateTaxonomy(
-  translate: (key: string) => string,
-  key: string | null | undefined,
-  fallback: string,
-) {
-  if (!key) return fallback
-  try {
-    return translate(key)
-  } catch {
-    return fallback
-  }
-}
 
 const HOVER_INTERVAL_MS = 1600;
 const TOUCH_HOVER_DELAY_MS = 1400;
@@ -35,12 +23,12 @@ export function PropertyCard({
   mode?: CardMode;
 }) {
   const locale = useLocale() as Locale;
-  const tDistrict = useTranslations('District');
   const tDeal = useTranslations('Deal');
   const tProperty = useTranslations('Property');
   const tStatus = useTranslations('Status');
   const tTags = useTranslations('Tags');
   const { format } = useCurrency();
+  const { districtLabel: lookupDistrict } = useTaxonomyLabels();
 
   const images = [property.coverImage, ...property.gallery.filter((g) => g !== property.coverImage)];
   const [activeImg, setActiveImg] = useState(0);
@@ -139,7 +127,7 @@ export function PropertyCard({
 
   const isAvailable = property.status === 'available';
   const investorPick = property.tags.includes('investor-pick');
-  const districtLabel = translateTaxonomy(tDistrict, property.district, property.district ?? '—');
+  const districtLabel = lookupDistrict(property.district) || (property.district ?? '—');
 
   const onPointerEnter = () => setHovered(true);
   const onPointerLeave = () => setHovered(false);

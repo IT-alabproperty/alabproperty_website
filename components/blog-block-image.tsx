@@ -11,20 +11,18 @@ interface Props {
 
 /**
  * Inline image inside a blog post body.
- * - Displays in its natural aspect ratio (no forced crop). Browser picks the
- *   intrinsic ratio once the image loads.
- * - Tap/click opens a lightbox so the user can inspect the full image.
- * - If the image fails to load (expired URL, blocked CDN, deleted storage
- *   object), we render an on-brand placeholder instead of leaving a broken
- *   icon in the middle of an empty rectangle.
+ *
+ * Body images use a fixed 16:9 aspect (with object-cover) so the article
+ * column reads as a clean grid no matter the upload — portrait phone shots,
+ * panoramas, squares all crop to the same frame. The full uncropped image
+ * is still one tap away via the lightbox.
+ *
+ * If the image fails to load (expired URL, blocked CDN, deleted storage
+ * object), an on-brand placeholder is shown in the same 16:9 box.
  */
 export function BlogBlockImage({ src, alt }: Props) {
   const [open, setOpen] = useState(false);
   const [broken, setBroken] = useState(false);
-  // Capture intrinsic dimensions so Next/Image can render with a stable
-  // aspect-ratio box and the browser doesn't have to relayout when the
-  // image arrives. Defaults are a reasonable landscape until we know.
-  const [dims, setDims] = useState<{ w: number; h: number }>({ w: 1600, h: 1067 });
 
   // Lock background scroll while the lightbox is open.
   useEffect(() => {
@@ -46,7 +44,7 @@ export function BlogBlockImage({ src, alt }: Props) {
     return (
       <div
         className="flex w-full flex-col items-center justify-center gap-2 rounded bg-cream-warm text-teak/30"
-        style={{ aspectRatio: '16 / 10' }}
+        style={{ aspectRatio: '16 / 9' }}
         aria-hidden="true"
       >
         <ImageOff className="h-6 w-6" strokeWidth={1.25} />
@@ -64,21 +62,15 @@ export function BlogBlockImage({ src, alt }: Props) {
         onClick={() => setOpen(true)}
         aria-label={alt || 'View full image'}
         className="group relative block w-full overflow-hidden rounded transition-opacity hover:opacity-95"
+        style={{ aspectRatio: '16 / 9' }}
       >
         <Image
           src={src}
           alt={alt}
-          width={dims.w}
-          height={dims.h}
+          fill
           sizes="(min-width: 1024px) 820px, 100vw"
-          className="block h-auto w-full"
+          className="object-cover"
           onError={() => setBroken(true)}
-          onLoad={(e) => {
-            const img = e.currentTarget;
-            if (img.naturalWidth && img.naturalHeight && img.naturalWidth !== dims.w) {
-              setDims({ w: img.naturalWidth, h: img.naturalHeight });
-            }
-          }}
         />
         <span className="pointer-events-none absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-ink/55 text-cream opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
           <Maximize2 className="h-4 w-4" strokeWidth={1.75} />

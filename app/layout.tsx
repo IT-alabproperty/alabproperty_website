@@ -8,6 +8,8 @@ import { Footer } from '@/components/footer';
 import { ScrollRevealMount } from '@/components/scroll-reveal';
 import { LoadingScreen } from '@/components/loading-screen';
 import { ProposalModalProvider } from '@/components/proposal-modal';
+import { TaxonomyProvider } from '@/components/taxonomy-context';
+import { getCities, getPropertyTypes, getDistricts } from '@/lib/db/taxonomy';
 import type { Locale } from '@/lib/types';
 import './globals.css';
 
@@ -34,23 +36,30 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = (await getLocale()) as Locale;
-  const messages = await getMessages();
+  const [messages, cities, types, districts] = await Promise.all([
+    getMessages(),
+    getCities(),
+    getPropertyTypes(),
+    getDistricts(),
+  ]);
 
   return (
     <html lang={locale} className={`${cormorant.variable} ${interTight.variable}`}>
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <CurrencyProvider locale={locale}>
-            <ProposalModalProvider>
-              <LoadingScreen />
-              <div className="alab-wood-texture" aria-hidden="true" />
-              <div className="alab-grain" aria-hidden="true" />
-              <Nav />
-              {children}
-              <Footer />
-              <ScrollRevealMount />
-            </ProposalModalProvider>
-          </CurrencyProvider>
+          <TaxonomyProvider cities={cities} types={types} districts={districts}>
+            <CurrencyProvider locale={locale}>
+              <ProposalModalProvider>
+                <LoadingScreen />
+                <div className="alab-wood-texture" aria-hidden="true" />
+                <div className="alab-grain" aria-hidden="true" />
+                <Nav />
+                {children}
+                <Footer />
+                <ScrollRevealMount />
+              </ProposalModalProvider>
+            </CurrencyProvider>
+          </TaxonomyProvider>
         </NextIntlClientProvider>
       </body>
     </html>
