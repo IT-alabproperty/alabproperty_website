@@ -3,25 +3,102 @@ import { Resend } from 'resend'
 import { insertLead } from '@/lib/db/leads'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
-export async function POST(req: NextRequest) {
-  const body = await req.json()
+// Hard caps prevent abuse: someone POST-ing a 10 MB "message" would otherwise
+// blow up Resend / Telegram and burn through quotas. Numbers chosen well above
+// any legitimate use of the form.
+const NAME_MAX = 200
+const EMAIL_MAX = 200
+const PHONE_MAX = 50
+const MESSAGE_MAX = 5000
+const TITLE_MAX = 300
+const ID_MAX = 100
+const SLUG_MAX = 120
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/
+// Match what `lib/db/leads.ts` accepts. Adding a new channel = add it here AND
+// widen the Lead.preferred_contact union.
+const ALLOWED_CONTACT = new Set(['email', 'phone', 'whatsapp'] as const)
 
-  // validate required fields
-  if (!body.name || !body.email) {
-    return NextResponse.json({ error: 'name and email required' }, { status: 400 })
+interface CleanLead {
+  name: string
+  email: string
+  phone: string | undefined
+  preferredContact: 'email' | 'phone' | 'whatsapp'
+  message: string | undefined
+  cryptoPayment: boolean
+  propertyId: string | null
+  propertyTitle: string | null
+  propertySlug: string | null
+}
+
+function validate(raw: unknown): { ok: true; data: CleanLead } | { ok: false; error: string } {
+  if (!raw || typeof raw !== 'object') return { ok: false, error: 'body must be object' }
+  const b = raw as Record<string, unknown>
+
+  const name = typeof b.name === 'string' ? b.name.trim() : ''
+  const email = typeof b.email === 'string' ? b.email.trim() : ''
+  if (!name) return { ok: false, error: 'name required' }
+  if (name.length > NAME_MAX) return { ok: false, error: `name too long (max ${NAME_MAX})` }
+  if (!EMAIL_RE.test(email) || email.length > EMAIL_MAX) {
+    return { ok: false, error: 'invalid email' }
   }
+
+  const phone = typeof b.phone === 'string' ? b.phone.trim().slice(0, PHONE_MAX) : ''
+  const message = typeof b.message === 'string' ? b.message.trim() : ''
+  if (message.length > MESSAGE_MAX) {
+    return { ok: false, error: `message too long (max ${MESSAGE_MAX})` }
+  }
+
+  const contactRaw = typeof b.preferredContact === 'string' ? b.preferredContact : 'email'
+  const preferredContact: 'email' | 'phone' | 'whatsapp' =
+    contactRaw === 'phone' || contactRaw === 'whatsapp' ? contactRaw : 'email'
+
+  const propertyId = typeof b.propertyId === 'string' ? b.propertyId.slice(0, ID_MAX) : null
+  const propertyTitle = typeof b.propertyTitle === 'string' ? b.propertyTitle.slice(0, TITLE_MAX) : null
+  const propertySlugRaw = typeof b.propertySlug === 'string' ? b.propertySlug.toLowerCase() : ''
+  const propertySlug = propertySlugRaw && SLUG_RE.test(propertySlugRaw) && propertySlugRaw.length <= SLUG_MAX
+    ? propertySlugRaw
+    : null
+
+  return {
+    ok: true,
+    data: {
+      name,
+      email,
+      phone: phone || undefined,
+      preferredContact,
+      message: message || undefined,
+      cryptoPayment: !!b.cryptoPayment,
+      propertyId,
+      propertyTitle,
+      propertySlug,
+    },
+  }
+}
+
+export async function POST(req: NextRequest) {
+  let raw: unknown
+  try { raw = await req.json() } catch {
+    return NextResponse.json({ error: 'invalid json' }, { status: 400 })
+  }
+
+  const validated = validate(raw)
+  if (!validated.ok) {
+    return NextResponse.json({ error: validated.error }, { status: 400 })
+  }
+  const body = validated.data
 
   // 1. Save to Supabase first — source of truth, must not be lost
   const result = await insertLead({
     name: body.name,
     email: body.email,
     phone: body.phone || undefined,
-    preferred_contact: body.preferredContact || 'email',
+    preferred_contact: body.preferredContact,
     message: body.message || undefined,
-    crypto_payment: !!body.cryptoPayment,
-    property_id: body.propertyId || null,
-    property_title: body.propertyTitle || null,
-    property_slug: body.propertySlug || null,
+    crypto_payment: body.cryptoPayment,
+    property_id: body.propertyId,
+    property_title: body.propertyTitle,
+    property_slug: body.propertySlug,
   })
 
   if (!result.success) {
