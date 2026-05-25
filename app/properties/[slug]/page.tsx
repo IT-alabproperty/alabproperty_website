@@ -6,6 +6,7 @@ import {
   ShieldCheck, Eye, MapPin,
 } from 'lucide-react';
 import { getPropertyBySlug, getRelatedProperties, getAllProperties } from '@/lib/db/properties';
+import { getDistricts, getPropertyTypes } from '@/lib/db/taxonomy';
 import { PropertyGallery } from '@/components/property/property-gallery';
 import { RoiCalculator } from '@/components/property/roi-calculator';
 import { ContactForm } from '@/components/property/contact-form';
@@ -15,8 +16,25 @@ import { Eyebrow } from '@/components/ui/eyebrow';
 import { PriceDisplay } from '@/components/property/price-display';
 import { ProposalButton } from '@/components/proposal-button';
 import { ViewTracker } from '@/components/property/view-tracker';
-import { useTaxonomyLabels } from '@/components/taxonomy-context';
 import type { Locale, Property, Amenity } from '@/lib/types';
+
+/** "phrom-phong" → "Phrom Phong" — fallback when a slug isn't in any taxonomy row. */
+function prettifySlug(slug: string): string {
+  return slug
+    .replace(/[_-]+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+interface TaxRow { slug: string; name: { ru: string; en: string } }
+function resolveLabel(rows: TaxRow[], slug: string | null | undefined, locale: Locale): string {
+  if (!slug) return '—';
+  const row = rows.find((r) => r.slug === slug);
+  if (row) return row.name?.[locale] ?? row.name?.ru ?? prettifySlug(slug);
+  return prettifySlug(slug);
+}
 
 export async function generateStaticParams() {
   const properties = await getAllProperties();
@@ -25,21 +43,35 @@ export async function generateStaticParams() {
 
 export default async function PropertyPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [property, related] = await Promise.all([
+  const [property, related, districts, types] = await Promise.all([
     getPropertyBySlug(slug),
     getRelatedProperties(slug, 3),
+    getDistricts(),
+    getPropertyTypes(),
   ]);
   if (!property) notFound();
 
   return (
     <>
       <ViewTracker slug={property.slug} />
-      <PropertyContent property={property} related={related} />
+      <PropertyContent
+        property={property}
+        related={related}
+        districts={districts}
+        types={types}
+      />
     </>
   );
 }
 
-function PropertyContent({ property, related }: { property: Property; related: Property[] }) {
+function PropertyContent({
+  property, related, districts, types,
+}: {
+  property: Property;
+  related: Property[];
+  districts: TaxRow[];
+  types: TaxRow[];
+}) {
   const locale = useLocale() as Locale;
   const t = useTranslations('PropertyPage');
   const tCatalog = useTranslations('Catalog');
@@ -48,10 +80,9 @@ function PropertyContent({ property, related }: { property: Property; related: P
   const tOwnership = useTranslations('Ownership');
   const tTags = useTranslations('Tags');
   const tAmenities = useTranslations('Amenities');
-  const { districtLabel: lookupDistrict, typeLabel: lookupType } = useTaxonomyLabels();
 
-  const districtLabel = lookupDistrict(property.district) || (property.district ?? '—');
-  const typeLabel = lookupType(property.type) || (property.type ?? '—');
+  const districtLabel = resolveLabel(districts, property.district, locale);
+  const typeLabel = resolveLabel(types, property.type, locale);
   const ownershipLabel = (() => {
     try { return property.ownership ? tOwnership(property.ownership) : '—'; }
     catch { return property.ownership ?? '—'; }
