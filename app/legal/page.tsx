@@ -9,11 +9,13 @@ import { buildMetadata } from '@/lib/seo';
 export async function generateMetadata(): Promise<Metadata> {
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations({ locale, namespace: 'SEO' });
+  // Hidden from nav + sitemap while copy is being finalised. See nav.tsx note.
   return buildMetadata({
     locale,
     title: t('pages.legal.title'),
     description: t('pages.legal.description'),
     path: '/legal',
+    noindex: true,
   });
 }
 

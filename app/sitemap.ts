@@ -16,8 +16,8 @@ const STATIC_ROUTES: StaticEntry[] = [
   { path: '/', changeFrequency: 'weekly', priority: 1.0 },
   { path: '/properties', changeFrequency: 'daily', priority: 0.9 },
   { path: '/blog', changeFrequency: 'weekly', priority: 0.7 },
-  { path: '/business', changeFrequency: 'monthly', priority: 0.6 },
-  { path: '/legal', changeFrequency: 'monthly', priority: 0.6 },
+  // /business and /legal hidden until copy is finalised — see nav.tsx note.
+  // Restore both entries and remove the noindex from their pages when ready.
   { path: '/contacts', changeFrequency: 'yearly', priority: 0.5 },
   { path: '/privacy', changeFrequency: 'yearly', priority: 0.2 },
 ];

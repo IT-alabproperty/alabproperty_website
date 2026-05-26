@@ -46,12 +46,15 @@ export function Nav() {
 
   if (pathname.startsWith('/gate')) return null;
 
-  const navLinks = [
+  // `/business` and `/legal` are temporarily hidden from public navigation
+  // while the copy is being finalised. Direct URLs still work for previewing;
+  // sitemap excludes them and metadata marks them noindex.
+  const navLinks: { href: string; label: string; mobileLabel?: string }[] = [
     { href: '/', label: t('home') },
     { href: '/properties', label: t('properties') },
-    { href: '/business', label: t('business'), mobileLabel: t('businessFull') },
+    // { href: '/business', label: t('business'), mobileLabel: t('businessFull') },
     { href: '/blog', label: t('blog') },
-    { href: '/legal', label: t('legal') },
+    // { href: '/legal', label: t('legal') },
   ];
 
   return (

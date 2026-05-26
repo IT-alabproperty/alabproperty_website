@@ -7,11 +7,15 @@ import type { Locale } from '@/lib/types';
 export async function generateMetadata(): Promise<Metadata> {
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations({ locale, namespace: 'SEO' });
+  // Hidden from nav + sitemap while copy is being finalised. Direct URL still
+  // works for previewing — remove `noindex: true` and restore nav/sitemap entries
+  // when ready to publish.
   return buildMetadata({
     locale,
     title: t('pages.business.title'),
     description: t('pages.business.description'),
     path: '/business',
+    noindex: true,
   });
 }
 

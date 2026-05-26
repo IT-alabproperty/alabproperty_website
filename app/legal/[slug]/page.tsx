@@ -42,6 +42,8 @@ export async function generateMetadata({
     image: article.coverImage || undefined,
     imageAlt: title,
     ogType: 'article',
+    // Whole /legal section is hidden from indexing until copy is finalised.
+    noindex: true,
   });
 }
 
