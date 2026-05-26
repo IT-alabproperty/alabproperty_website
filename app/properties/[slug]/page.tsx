@@ -1,12 +1,15 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
+import Script from 'next/script';
 import { notFound } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
+import { getLocale, getTranslations } from 'next-intl/server';
 import {
   ArrowLeft, BedDouble, Bath, Maximize, Building2, Calendar,
   ShieldCheck, Eye, MapPin,
 } from 'lucide-react';
 import { getPropertyBySlug, getRelatedProperties, getAllProperties } from '@/lib/db/properties';
-import { getDistricts, getPropertyTypes } from '@/lib/db/taxonomy';
+import { getDistricts, getPropertyTypes, getCities } from '@/lib/db/taxonomy';
 import { PropertyGallery } from '@/components/property/property-gallery';
 import { RoiCalculator } from '@/components/property/roi-calculator';
 import { ContactForm } from '@/components/property/contact-form';
@@ -16,6 +19,7 @@ import { Eyebrow } from '@/components/ui/eyebrow';
 import { PriceDisplay } from '@/components/property/price-display';
 import { ProposalButton } from '@/components/proposal-button';
 import { ViewTracker } from '@/components/property/view-tracker';
+import { buildMetadata, SITE_URL, truncate } from '@/lib/seo';
 import type { Locale, Property, Amenity } from '@/lib/types';
 
 /** "phrom-phong" → "Phrom Phong" — fallback when a slug isn't in any taxonomy row. */
@@ -41,18 +45,107 @@ export async function generateStaticParams() {
   return properties.map((p) => ({ slug: p.slug }));
 }
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const locale = (await getLocale()) as Locale;
+  const property = await getPropertyBySlug(slug);
+  if (!property) {
+    const t = await getTranslations({ locale, namespace: 'SEO' });
+    return buildMetadata({
+      locale,
+      title: t('defaultTitle'),
+      description: t('defaultDescription'),
+      path: `/properties/${slug}`,
+      noindex: true,
+    });
+  }
+  const name = property.name[locale] || property.name.ru;
+  const description = truncate(
+    property.description[locale] || property.description.ru || property.address[locale] || '',
+    160,
+  );
+  return buildMetadata({
+    locale,
+    title: name,
+    description,
+    path: `/properties/${property.slug}`,
+    image: property.coverImage || property.gallery?.[0],
+    imageAlt: name,
+    ogType: 'article',
+  });
+}
+
 export default async function PropertyPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [property, related, districts, types] = await Promise.all([
+  const locale = (await getLocale()) as Locale;
+  const [property, related, districts, types, cities] = await Promise.all([
     getPropertyBySlug(slug),
     getRelatedProperties(slug, 3),
     getDistricts(),
     getPropertyTypes(),
+    getCities(),
   ]);
   if (!property) notFound();
 
+  // RealEstateListing JSON-LD. Numbers get coerced where Schema.org expects
+  // strings; missing values are simply omitted rather than defaulted.
+  const cityRow = property.city ? cities.find((c) => c.slug === property.city) : null;
+  const localityName = cityRow?.name?.[locale] ?? cityRow?.name?.ru ?? undefined;
+  const propertyName = property.name[locale] || property.name.ru;
+  const propertyDescription = truncate(
+    property.description[locale] || property.description.ru || '',
+    320,
+  );
+  const listingLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'RealEstateListing',
+    name: propertyName,
+    url: `${SITE_URL}/properties/${property.slug}`,
+    description: propertyDescription || undefined,
+    image: property.coverImage || property.gallery?.[0] || undefined,
+    numberOfRooms: property.bedrooms || undefined,
+    numberOfBedrooms: property.bedrooms || undefined,
+    numberOfBathroomsTotal: property.bathrooms || undefined,
+    floorSize: property.areaSqm
+      ? { '@type': 'QuantitativeValue', value: property.areaSqm, unitCode: 'MTK' }
+      : undefined,
+    yearBuilt: property.yearBuilt || undefined,
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: property.address?.[locale] || property.address?.ru || undefined,
+      addressLocality: localityName,
+      addressCountry: 'TH',
+    },
+    geo: property.coordinates
+      ? {
+          '@type': 'GeoCoordinates',
+          latitude: property.coordinates.lat,
+          longitude: property.coordinates.lng,
+        }
+      : undefined,
+    offers: {
+      '@type': 'Offer',
+      price: property.priceThb,
+      priceCurrency: 'THB',
+      availability:
+        property.status === 'available'
+          ? 'https://schema.org/InStock'
+          : 'https://schema.org/OutOfStock',
+      url: `${SITE_URL}/properties/${property.slug}`,
+    },
+  };
+
   return (
     <>
+      <Script
+        id={`ld-listing-${property.slug}`}
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(listingLd) }}
+      />
       <ViewTracker slug={property.slug} />
       <PropertyContent
         property={property}

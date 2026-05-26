@@ -1,9 +1,12 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
+import Script from 'next/script';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { Eyebrow } from '@/components/ui/eyebrow';
 import { getPostBySlug, type BlogBlock } from '@/lib/db/blog';
+import { buildMetadata, SITE_URL, truncate } from '@/lib/seo';
 import type { Locale } from '@/lib/types';
 import { BlogBlockImage } from '@/components/blog-block-image';
 import { BlogCoverImage } from '@/components/blog-cover-image';
@@ -50,6 +53,52 @@ function BlockRenderer({ block, locale }: { block: BlogBlock; locale: Locale }) 
   return null;
 }
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const locale = (await getLocale()) as Locale;
+  const post = await getPostBySlug(slug);
+  if (!post) {
+    const t = await getTranslations({ locale, namespace: 'SEO' });
+    return buildMetadata({
+      locale,
+      title: t('defaultTitle'),
+      description: t('defaultDescription'),
+      path: `/blog/${slug}`,
+      noindex: true,
+    });
+  }
+  const title = post.title[locale] || post.title.ru || post.slug;
+  const description = truncate(
+    post.excerpt[locale] || post.excerpt.ru || '',
+    160,
+  );
+  return buildMetadata({
+    locale,
+    title,
+    description,
+    path: `/blog/${post.slug}`,
+    image: post.cover_image ?? undefined,
+    imageAlt: title,
+    ogType: 'article',
+  });
+}
+
+/** Flatten the structured blog blocks into a plain-text articleBody for JSON-LD. */
+function blocksToPlainText(blocks: BlogBlock[], locale: Locale): string {
+  const parts: string[] = [];
+  for (const block of blocks) {
+    if (block.type === 'heading' || block.type === 'paragraph') {
+      const text = block.text[locale] || block.text.ru;
+      if (text) parts.push(text);
+    }
+  }
+  return parts.join('\n\n');
+}
+
 export default async function BlogPostPage({
   params,
 }: {
@@ -65,8 +114,40 @@ export default async function BlogPostPage({
   const title = post.title[locale] || post.title.ru || post.slug;
   const date = formatDate(post.published_at ?? post.created_at, locale);
 
+  const blogPostingLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: title,
+    description: truncate(post.excerpt[locale] || post.excerpt.ru || '', 200) || undefined,
+    image: post.cover_image || undefined,
+    datePublished: post.published_at ?? post.created_at,
+    dateModified: post.updated_at ?? post.published_at ?? post.created_at,
+    inLanguage: locale === 'ru' ? 'ru-RU' : 'en-US',
+    author: {
+      '@type': 'Organization',
+      name: 'ALAB Property',
+      url: SITE_URL,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'ALAB Property',
+      url: SITE_URL,
+      logo: { '@type': 'ImageObject', url: `${SITE_URL}/opengraph-image` },
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `${SITE_URL}/blog/${post.slug}`,
+    },
+    articleBody: blocksToPlainText(post.blocks, locale) || undefined,
+  };
+
   return (
     <main className="min-h-screen bg-paper px-6 pb-32 pt-32 sm:px-10 sm:pt-40 lg:px-14">
+      <Script
+        id={`ld-blogposting-${post.slug}`}
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(blogPostingLd) }}
+      />
       <article className="mx-auto max-w-[820px]">
         <Link
           href="/blog"

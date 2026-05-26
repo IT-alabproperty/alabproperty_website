@@ -1,4 +1,18 @@
-import { getLocale } from 'next-intl/server';
+import type { Metadata } from 'next';
+import { getLocale, getTranslations } from 'next-intl/server';
+import { buildMetadata } from '@/lib/seo';
+import type { Locale } from '@/lib/types';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = (await getLocale()) as Locale;
+  const t = await getTranslations({ locale, namespace: 'SEO' });
+  return buildMetadata({
+    locale,
+    title: t('pages.contacts.title'),
+    description: t('pages.contacts.description'),
+    path: '/contacts',
+  });
+}
 
 export default async function ContactsPage() {
   const locale = await getLocale();

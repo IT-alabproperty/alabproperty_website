@@ -3,6 +3,7 @@ import { Resend } from 'resend'
 import { insertLead } from '@/lib/db/leads'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { makeLimiter, rateLimit, clientIp } from '@/lib/rate-limit'
+import { scrubTokens } from '@/lib/log-safe'
 
 // 5 leads per IP every 10 minutes. Anything beyond that is almost certainly a
 // bot — a real client doesn't submit the contact form six times.
@@ -213,10 +214,10 @@ export async function POST(req: NextRequest) {
           })
           if (!res.ok) {
             const detail = await res.text().catch(() => '')
-            console.error('[api/leads] telegram send failed:', r.chat_id, res.status, detail)
+            console.error('[api/leads] telegram send failed:', r.chat_id, res.status, scrubTokens(detail))
           }
         } catch (e) {
-          console.error('[api/leads] telegram fetch failed:', r.chat_id, e)
+          console.error('[api/leads] telegram fetch failed:', r.chat_id, scrubTokens(e))
         } finally {
           clearTimeout(timeout)
         }
@@ -225,8 +226,7 @@ export async function POST(req: NextRequest) {
       console.warn('[api/leads] TELEGRAM_BOT_TOKEN not configured — TG skipped')
     }
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    console.error('[api/leads] telegram failed (lead saved to DB):', msg)
+    console.error('[api/leads] telegram failed (lead saved to DB):', scrubTokens(err))
   }
 
   return NextResponse.json({ ok: true })

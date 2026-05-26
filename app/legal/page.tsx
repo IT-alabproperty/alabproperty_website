@@ -1,7 +1,21 @@
+import type { Metadata } from 'next';
 import { useLocale, useTranslations } from 'next-intl';
+import { getLocale, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import type { Locale } from '@/lib/types';
 import { LegalTrustSection } from '@/components/sections/legal-trust-section';
+import { buildMetadata } from '@/lib/seo';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = (await getLocale()) as Locale;
+  const t = await getTranslations({ locale, namespace: 'SEO' });
+  return buildMetadata({
+    locale,
+    title: t('pages.legal.title'),
+    description: t('pages.legal.description'),
+    path: '/legal',
+  });
+}
 
 export default function LegalPage() {
   const t = useTranslations('Nav');

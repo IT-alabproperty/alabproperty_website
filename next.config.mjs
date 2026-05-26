@@ -23,6 +23,8 @@ const securityHeaders = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Yandex/Google prefer one canonical URL per page. Stay on the no-slash form.
+  trailingSlash: false,
   images: {
     // Next.js сам конвертит в WebP/AVIF, делает несколько размеров под devicePixelRatio,
     // и кэширует на 31 день.

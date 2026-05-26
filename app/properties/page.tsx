@@ -1,8 +1,22 @@
-import { getTranslations } from 'next-intl/server';
+import type { Metadata } from 'next';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { PropertyCatalog } from '@/components/property-catalog';
 import { Eyebrow } from '@/components/ui/eyebrow';
 import { getAllProperties } from '@/lib/db/properties';
 import { getCities, getPropertyTypes, getDistricts } from '@/lib/db/taxonomy';
+import { buildMetadata } from '@/lib/seo';
+import type { Locale } from '@/lib/types';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = (await getLocale()) as Locale;
+  const t = await getTranslations({ locale, namespace: 'SEO' });
+  return buildMetadata({
+    locale,
+    title: t('pages.properties.title'),
+    description: t('pages.properties.description'),
+    path: '/properties',
+  });
+}
 
 export default async function PropertiesPage() {
   const [t, properties, cities, types, districts] = await Promise.all([

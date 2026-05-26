@@ -1,7 +1,9 @@
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 
 export function Footer() {
   const t = useTranslations('Footer');
+  const tPrivacy = useTranslations('Privacy');
   const year = new Date().getFullYear();
 
   return (
@@ -24,9 +26,17 @@ export function Footer() {
         </div>
 
         {/* Bottom row */}
-        <div className="mt-6 flex flex-col items-center justify-between gap-2 sm:flex-row">
+        <div className="mt-6 flex flex-col items-center justify-between gap-3 sm:flex-row">
           <div>{t('copyright', { year })}</div>
-          <div className="text-center sm:text-right">{t('tagline')}</div>
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:gap-6">
+            <Link
+              href="/privacy"
+              className="uppercase tracking-[0.14em] text-cream/50 transition-colors hover:text-gold"
+            >
+              {tPrivacy('footerLink')}
+            </Link>
+            <span className="text-center sm:text-right">{t('tagline')}</span>
+          </div>
         </div>
       </div>
     </footer>

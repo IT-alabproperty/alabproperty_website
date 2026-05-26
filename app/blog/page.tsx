@@ -1,14 +1,27 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { Eyebrow } from '@/components/ui/eyebrow';
 import { getPublishedPosts } from '@/lib/db/blog';
 import { BlogCoverImage } from '@/components/blog-cover-image';
+import { buildMetadata } from '@/lib/seo';
 import type { Locale } from '@/lib/types';
 
 function formatDate(iso: string | null, locale: Locale): string {
   if (!iso) return '';
   return new Date(iso).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US', {
     year: 'numeric', month: 'long', day: 'numeric',
+  });
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = (await getLocale()) as Locale;
+  const t = await getTranslations({ locale, namespace: 'SEO' });
+  return buildMetadata({
+    locale,
+    title: t('pages.blog.title'),
+    description: t('pages.blog.description'),
+    path: '/blog',
   });
 }
 

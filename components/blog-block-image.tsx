@@ -26,11 +26,40 @@ export function BlogBlockImage({ src, alt }: Props) {
   const [loaded, setLoaded] = useState(false);
 
   // Lock background scroll while the lightbox is open.
+  // Why so thorough: iOS Safari WebView (incl. Telegram Mini App) doesn't
+  // always honour `body { overflow: hidden }` — touch scrolling can still
+  // bubble through to the page. We also lock <html> overflow + freeze body
+  // position at the current scrollY, restoring it on close. This is the
+  // body-scroll-lock pattern, hand-rolled to avoid the dependency.
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
+    const root = document.documentElement;
+    const body = document.body;
+    const scrollY = window.scrollY;
+    const prev = {
+      htmlOverflow: root.style.overflow,
+      bodyOverflow: body.style.overflow,
+      bodyPosition: body.style.position,
+      bodyTop: body.style.top,
+      bodyWidth: body.style.width,
+      bodyTouch: body.style.touchAction,
+    };
+    root.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.width = '100%';
+    body.style.touchAction = 'none';
+    return () => {
+      root.style.overflow = prev.htmlOverflow;
+      body.style.overflow = prev.bodyOverflow;
+      body.style.position = prev.bodyPosition;
+      body.style.top = prev.bodyTop;
+      body.style.width = prev.bodyWidth;
+      body.style.touchAction = prev.bodyTouch;
+      // Restore scroll exactly — body:fixed reset the position to 0.
+      window.scrollTo(0, scrollY);
+    };
   }, [open]);
 
   // Esc to close.
