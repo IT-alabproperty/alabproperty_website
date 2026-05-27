@@ -160,6 +160,7 @@ async function handleLeadSubmission(req: NextRequest): Promise<NextResponse> {
 
   if (!result.success) {
     // DB write failure — page the team, lead is lost otherwise.
+    console.error('[api/leads] supabase insert failed:', result.error)
     notifyTechAdmins('critical', {
       source: '/api/leads · supabase insert',
       message: 'Lead INSERT failed — data lost',
