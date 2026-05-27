@@ -173,7 +173,7 @@ async function handleLeadSubmission(req: NextRequest): Promise<NextResponse> {
   //    (a) Plain-text inbox notification to the agency mailbox.
   //    (b) Branded HTML confirmation to the prospect's own inbox.
   try {
-    const apiKey = process.env.RESEND_API_KEY
+    const apiKey = process.env.RESEND_API_KEY?.trim() ?? ''
     if (!apiKey || apiKey.includes('xxxx')) {
       console.warn('[api/leads] RESEND_API_KEY not configured — emails skipped, lead saved to Supabase only')
     } else {
@@ -263,16 +263,22 @@ async function handleLeadSubmission(req: NextRequest): Promise<NextResponse> {
         console.error('[api/leads] failed to load lead subscribers:', e)
       }
 
-      // Fallback: env TELEGRAM_CHAT_ID
+      // Fallback: env TELEGRAM_CHAT_IDS or TELEGRAM_CHAT_ID.
+      // Supabase subscribers are primary; env IDs are only used when DB has none.
       if (recipients.length === 0) {
-        const fallback = process.env.TELEGRAM_CHAT_ID?.trim() ?? ''
-        const chatId = Number(fallback)
-        if (fallback && Number.isFinite(chatId)) {
-          recipients = [{ chat_id: chatId, lang: 'ru' }]
-        } else if (fallback) {
-          console.warn('[api/leads] TELEGRAM_CHAT_ID provided but invalid — TG skipped')
+        const fallback = process.env.TELEGRAM_CHAT_IDS?.trim() ?? process.env.TELEGRAM_CHAT_ID?.trim() ?? ''
+        if (fallback) {
+          recipients = fallback
+            .split(/[\s,;]+/)
+            .map((id) => Number(id.trim()))
+            .filter((id) => Number.isFinite(id))
+            .map((chat_id) => ({ chat_id, lang: 'ru' }))
+
+          if (recipients.length === 0) {
+            console.warn('[api/leads] TELEGRAM_CHAT_IDS / TELEGRAM_CHAT_ID provided but contained no valid numeric chat IDs — TG skipped')
+          }
         } else {
-          console.warn('[api/leads] no lead subscribers and no TELEGRAM_CHAT_ID — TG skipped')
+          console.warn('[api/leads] no lead subscribers and no TELEGRAM_CHAT_ID(S) — TG skipped')
         }
       }
 

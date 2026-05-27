@@ -84,14 +84,17 @@ export async function notifyTechAdmins(severity: Severity, ctx: NotifyContext): 
     console.error('[notify-tech] failed to load subscribers:', scrubTokens(e))
   }
 
-  // Fallback to env-configured single chat ID.
+  // Fallback to env-configured chat IDs when no subscribers exist.
   if (chatIds.length === 0) {
-    const fallback = process.env.TELEGRAM_CHAT_ID?.trim() ?? ''
-    const chatId = Number(fallback)
-    if (fallback && Number.isFinite(chatId)) {
-      chatIds = [chatId]
-    } else if (fallback) {
-      console.warn('[notify-tech] TELEGRAM_CHAT_ID provided but invalid — alert dropped')
+    const fallback = process.env.TELEGRAM_CHAT_IDS?.trim() ?? process.env.TELEGRAM_CHAT_ID?.trim() ?? ''
+    if (fallback) {
+      chatIds = fallback
+        .split(/[\s,;]+/)
+        .map((id) => Number(id.trim()))
+        .filter((id) => Number.isFinite(id) && id !== 0)
+      if (chatIds.length === 0) {
+        console.warn('[notify-tech] TELEGRAM_CHAT_IDS / TELEGRAM_CHAT_ID provided but contained no valid numeric chat IDs — alert dropped')
+      }
     }
   }
   if (chatIds.length === 0) {
