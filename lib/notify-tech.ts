@@ -56,7 +56,7 @@ interface BotUserRow {
 }
 
 export async function notifyTechAdmins(severity: Severity, ctx: NotifyContext): Promise<void> {
-  const botToken = process.env.TELEGRAM_BOT_TOKEN
+  const botToken = process.env.TELEGRAM_BOT_TOKEN?.trim() ?? ''
   if (!botToken || botToken.includes('xxxx')) {
     console.warn('[notify-tech] TELEGRAM_BOT_TOKEN not set — alert dropped:', ctx.source, ctx.message)
     return
@@ -84,10 +84,15 @@ export async function notifyTechAdmins(severity: Severity, ctx: NotifyContext): 
     console.error('[notify-tech] failed to load subscribers:', scrubTokens(e))
   }
 
-  // Fallback to single env-configured chat id (the founder).
+  // Fallback to env-configured single chat ID.
   if (chatIds.length === 0) {
-    const fallback = process.env.TELEGRAM_CHAT_ID
-    if (fallback) chatIds = [Number(fallback)]
+    const fallback = process.env.TELEGRAM_CHAT_ID?.trim() ?? ''
+    const chatId = Number(fallback)
+    if (fallback && Number.isFinite(chatId)) {
+      chatIds = [chatId]
+    } else if (fallback) {
+      console.warn('[notify-tech] TELEGRAM_CHAT_ID provided but invalid — alert dropped')
+    }
   }
   if (chatIds.length === 0) {
     console.warn('[notify-tech] no recipients — alert dropped')

@@ -235,7 +235,7 @@ async function handleLeadSubmission(req: NextRequest): Promise<NextResponse> {
 
   // 3. Telegram notification — non-fatal too. Sends to all users subscribed to 'leads' topic.
   try {
-    const botToken = process.env.TELEGRAM_BOT_TOKEN
+    const botToken = process.env.TELEGRAM_BOT_TOKEN?.trim() ?? ''
     if (botToken && !botToken.includes('xxxx')) {
       // Find all active users whose role subscribes to 'leads' notifications
       let recipients: Array<{ chat_id: number; lang: 'ru' | 'en' }> = []
@@ -263,11 +263,14 @@ async function handleLeadSubmission(req: NextRequest): Promise<NextResponse> {
         console.error('[api/leads] failed to load lead subscribers:', e)
       }
 
-      // Fallback: env TELEGRAM_CHAT_ID (single recipient) if DB has no subscribers
+      // Fallback: env TELEGRAM_CHAT_ID
       if (recipients.length === 0) {
-        const fallback = process.env.TELEGRAM_CHAT_ID
-        if (fallback) {
-          recipients = [{ chat_id: Number(fallback), lang: 'ru' }]
+        const fallback = process.env.TELEGRAM_CHAT_ID?.trim() ?? ''
+        const chatId = Number(fallback)
+        if (fallback && Number.isFinite(chatId)) {
+          recipients = [{ chat_id: chatId, lang: 'ru' }]
+        } else if (fallback) {
+          console.warn('[api/leads] TELEGRAM_CHAT_ID provided but invalid — TG skipped')
         } else {
           console.warn('[api/leads] no lead subscribers and no TELEGRAM_CHAT_ID — TG skipped')
         }
