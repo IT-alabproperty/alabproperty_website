@@ -288,9 +288,9 @@ async function handleLeadSubmission(req: NextRequest): Promise<NextResponse> {
         // Inline keyboard with one-tap reply via Gmail compose. Reply language
         // matches the customer's locale, not the recipient's notification_lang.
         const replyTemplate = buildReplyTemplate(body)
-        const mailtoUrl = `mailto:${encodeURIComponent(body.email)}?subject=${encodeURIComponent(replyTemplate.subject)}&body=${encodeURIComponent(replyTemplate.body)}`
+        const gmailCompose = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(body.email)}&su=${encodeURIComponent(replyTemplate.subject)}&body=${encodeURIComponent(replyTemplate.body)}`
         const replyButtonLabel = r.lang === 'en' ? '✉️ Reply in Gmail' : '✉️ Ответить в Gmail'
-        const inline_keyboard = [[{ text: replyButtonLabel, url: mailtoUrl }]]
+        const inline_keyboard = [[{ text: replyButtonLabel, url: gmailCompose }]]
         if (body.propertySlug) {
           const openLabel = r.lang === 'en' ? '🏠 Open property' : '🏠 Открыть объект'
           inline_keyboard.push([
