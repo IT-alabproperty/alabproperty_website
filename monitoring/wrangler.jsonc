@@ -1,0 +1,30 @@
+// Cloudflare Worker config for the external uptime monitor.
+// Deploy with `wrangler deploy` from inside this folder.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "alab-health-monitor",
+  "main": "worker.js",
+  "compatibility_date": "2025-01-01",
+
+  // Cron schedule — every 1 minute. Free tier allows up to 1-min intervals.
+  // 1 ping/min × 60 × 24 = 1440/day, way under the 100 000 free invocations.
+  // Change to "*/5 * * * *" if 5-minute granularity is enough for you.
+  "triggers": {
+    "crons": ["* * * * *"]
+  },
+
+  // KV namespace for storing last-known status. Create with:
+  //   wrangler kv namespace create "STATE"
+  // Then paste the returned `id` below (and the preview_id for `wrangler dev`).
+  "kv_namespaces": [
+    {
+      "binding": "STATE",
+      "id": "7afbd647159245a8b8d839d3041d789b"
+    }
+  ]
+
+  // Secrets (set via CLI, NEVER commit them):
+  //   wrangler secret put TG_BOT_TOKEN
+  //   wrangler secret put TG_CHAT_ID
+  //   wrangler secret put HEALTH_URL
+}

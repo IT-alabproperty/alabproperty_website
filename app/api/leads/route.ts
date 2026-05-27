@@ -90,8 +90,43 @@ function validate(raw: unknown): { ok: true; data: CleanLead } | { ok: false; er
 }
 
 export async function POST(req: NextRequest) {
+  // ───── Top-level safety net ─────
+  // Any uncaught throw inside this handler (e.g. Upstash hiccup, Supabase
+  // outage, runtime type mismatch from a future refactor) would otherwise
+  // surface to the user as an opaque "500 something went wrong" with no log
+  // trail. Wrap everything and turn unknown crashes into a structured response
+  // + Telegram alert to tech admins.
+  try {
+    return await handleLeadSubmission(req)
+  } catch (err) {
+    const detail = err instanceof Error ? err.stack ?? err.message : String(err)
+    console.error('[api/leads] uncaught:', scrubTokens(detail))
+    notifyTechAdmins('critical', {
+      source: '/api/leads',
+      message: 'Unhandled exception in lead submission',
+      detail,
+      path: '/api/leads',
+    }).catch(() => { /* don't let alert failure mask the original */ })
+    return NextResponse.json(
+      { error: 'internal-error' },
+      { status: 500 },
+    )
+  }
+}
+
+async function handleLeadSubmission(req: NextRequest): Promise<NextResponse> {
   const ip = clientIp(req)
-  const rl = await rateLimit(limiter, ip)
+
+  // Rate-limit failures (Upstash KV outage) shouldn't 500 the form — the form
+  // is more important than the limiter. Treat any limiter error as "let it
+  // through" and continue.
+  let rl
+  try {
+    rl = await rateLimit(limiter, ip)
+  } catch (e) {
+    console.warn('[api/leads] rate limiter unavailable, allowing:', scrubTokens(e))
+    rl = { ok: true, retryAfter: 0, remaining: Infinity }
+  }
   if (!rl.ok) {
     return NextResponse.json(
       { error: 'too many requests, try again later' },
@@ -124,6 +159,12 @@ export async function POST(req: NextRequest) {
   })
 
   if (!result.success) {
+    // DB write failure — page the team, lead is lost otherwise.
+    notifyTechAdmins('critical', {
+      source: '/api/leads · supabase insert',
+      message: 'Lead INSERT failed — data lost',
+      detail: result.error ?? '(no message)',
+    }).catch(() => { /* never block the response */ })
     return NextResponse.json({ error: result.error }, { status: 500 })
   }
 
