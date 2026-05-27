@@ -70,6 +70,9 @@ export function ContactForm({ property }: ContactFormProps) {
       propertyId: property.id,
       propertySlug: property.slug,
       propertyTitle: property.name[locale],
+      // Send user's UI locale so the server can pick the right language for
+      // their confirmation email + Markdown reply template.
+      locale,
       submittedAt: new Date().toISOString(),
     };
 

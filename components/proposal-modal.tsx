@@ -203,6 +203,9 @@ function ModalForm({ property, onClose }: { property?: ProposalProperty; onClose
       propertyTitle: property ? (property.name[locale] ?? property.name.en) : null,
       propertySlug:  property?.slug ?? null,
       cryptoPayment: data.cryptoPayment,
+      // Send user's UI locale so the server can pick the right language for
+      // their confirmation email + Markdown reply template.
+      locale,
       submittedAt:   new Date().toISOString(),
     };
     try {

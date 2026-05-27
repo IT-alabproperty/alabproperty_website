@@ -4,6 +4,8 @@ import { insertLead } from '@/lib/db/leads'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { makeLimiter, rateLimit, clientIp } from '@/lib/rate-limit'
 import { scrubTokens } from '@/lib/log-safe'
+import { notifyTechAdmins } from '@/lib/notify-tech'
+import { renderLeadConfirmation } from '@/lib/email/lead-confirmation'
 
 // 5 leads per IP every 10 minutes. Anything beyond that is almost certainly a
 // bot — a real client doesn't submit the contact form six times.
@@ -35,6 +37,8 @@ interface CleanLead {
   propertyId: string | null
   propertyTitle: string | null
   propertySlug: string | null
+  /** UI locale at time of submission — drives confirmation email language. */
+  locale: 'ru' | 'en'
 }
 
 function validate(raw: unknown): { ok: true; data: CleanLead } | { ok: false; error: string } {
@@ -66,6 +70,8 @@ function validate(raw: unknown): { ok: true; data: CleanLead } | { ok: false; er
     ? propertySlugRaw
     : null
 
+  const locale: 'ru' | 'en' = b.locale === 'en' ? 'en' : 'ru'
+
   return {
     ok: true,
     data: {
@@ -78,6 +84,7 @@ function validate(raw: unknown): { ok: true; data: CleanLead } | { ok: false; er
       propertyId,
       propertyTitle,
       propertySlug,
+      locale,
     },
   }
 }
@@ -120,15 +127,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: result.error }, { status: 500 })
   }
 
-  // 2. Send notification email — non-fatal: if it fails, lead is still in Supabase
+  // 2. Send TWO emails in parallel — both non-fatal: the lead is already in
+  //    Supabase, anything below is best-effort UX polish.
+  //    (a) Plain-text inbox notification to the agency mailbox.
+  //    (b) Branded HTML confirmation to the prospect's own inbox.
   try {
     const apiKey = process.env.RESEND_API_KEY
     if (!apiKey || apiKey.includes('xxxx')) {
-      console.warn('[api/leads] RESEND_API_KEY not configured — email skipped, lead saved to Supabase only')
+      console.warn('[api/leads] RESEND_API_KEY not configured — emails skipped, lead saved to Supabase only')
     } else {
       const resend = new Resend(apiKey)
 
-      const lines = [
+      const adminLines = [
         `Name: ${body.name}`,
         `Email: ${body.email}`,
         body.phone ? `Phone: ${body.phone}` : null,
@@ -143,17 +153,43 @@ export async function POST(req: NextRequest) {
         `Date: ${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Bangkok' })}`,
       ].filter(Boolean)
 
-      await resend.emails.send({
-        from: 'ALAB Property <noreply@alabproperty.com>',
-        to: ['property@alabproperty.com'],
-        replyTo: body.email,
-        subject: `🔔 New Lead${body.propertyTitle ? `: ${body.propertyTitle}` : ''} — ${body.name}`,
-        text: lines.join('\n'),
+      const confirmation = renderLeadConfirmation({
+        name: body.name,
+        email: body.email,
+        phone: body.phone,
+        message: body.message,
+        propertyTitle: body.propertyTitle,
+        propertySlug: body.propertySlug,
+        cryptoPayment: body.cryptoPayment,
+        locale: body.locale,
       })
+
+      await Promise.allSettled([
+        resend.emails.send({
+          from: 'ALAB Property <noreply@alabproperty.com>',
+          to: ['property@alabproperty.com'],
+          replyTo: body.email,
+          subject: `🔔 New Lead${body.propertyTitle ? `: ${body.propertyTitle}` : ''} — ${body.name}`,
+          text: adminLines.join('\n'),
+        }),
+        resend.emails.send({
+          from: 'ALAB Property <noreply@alabproperty.com>',
+          to: [body.email],
+          replyTo: 'property@alabproperty.com',
+          subject: confirmation.subject,
+          html: confirmation.html,
+          text: confirmation.text,
+        }),
+      ])
     }
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    console.error('[api/leads] email send failed (lead saved to DB):', msg)
+    console.error('[api/leads] email send failed (lead saved to DB):', scrubTokens(err))
+    // Page tech admins — Resend down means new leads don't get a reply.
+    notifyTechAdmins('error', {
+      source: '/api/leads · resend',
+      message: 'Failed to send lead emails (admin + customer)',
+      detail: err instanceof Error ? err.stack ?? err.message : String(err),
+    }).catch(() => { /* never block the response */ })
   }
 
   // 3. Telegram notification — non-fatal too. Sends to all users subscribed to 'leads' topic.
@@ -198,6 +234,19 @@ export async function POST(req: NextRequest) {
 
       for (const r of recipients) {
         const tgLines = buildLeadMessage(body, r.lang)
+        // Inline keyboard with one-tap reply via Gmail compose. Reply language
+        // matches the customer's locale, not the recipient's notification_lang.
+        const replyTemplate = buildReplyTemplate(body)
+        const mailtoUrl = `mailto:${encodeURIComponent(body.email)}?subject=${encodeURIComponent(replyTemplate.subject)}&body=${encodeURIComponent(replyTemplate.body)}`
+        const replyButtonLabel = r.lang === 'en' ? '✉️ Reply in Gmail' : '✉️ Ответить в Gmail'
+        const inline_keyboard = [[{ text: replyButtonLabel, url: mailtoUrl }]]
+        if (body.propertySlug) {
+          const openLabel = r.lang === 'en' ? '🏠 Open property' : '🏠 Открыть объект'
+          inline_keyboard.push([
+            { text: openLabel, url: `https://alabproperty.com/properties/${body.propertySlug}` },
+          ])
+        }
+
         const controller = new AbortController()
         const timeout = setTimeout(() => controller.abort(), 10_000)
         try {
@@ -209,6 +258,7 @@ export async function POST(req: NextRequest) {
               text: tgLines,
               parse_mode: 'Markdown',
               disable_web_page_preview: true,
+              reply_markup: { inline_keyboard },
             }),
             signal: controller.signal,
           })
@@ -227,9 +277,63 @@ export async function POST(req: NextRequest) {
     }
   } catch (err) {
     console.error('[api/leads] telegram failed (lead saved to DB):', scrubTokens(err))
+    notifyTechAdmins('error', {
+      source: '/api/leads · telegram',
+      message: 'Failed to send lead notification to Telegram',
+      detail: err instanceof Error ? err.stack ?? err.message : String(err),
+    }).catch(() => { /* never block */ })
   }
 
   return NextResponse.json({ ok: true })
+}
+
+/**
+ * Pre-filled reply body for the "Reply in Gmail" inline-keyboard button.
+ * Opens the recipient's default mail client at compose with To/Subject/Body
+ * already populated — admin just tweaks and sends.
+ *
+ * Language follows the customer's `locale` (the lead's UI language at time
+ * of submission), so they hear back in the language they wrote in.
+ */
+function buildReplyTemplate(body: CleanLead): { subject: string; body: string } {
+  if (body.locale === 'en') {
+    const subject = body.propertyTitle
+      ? `Re: Your inquiry about ${body.propertyTitle}`
+      : 'Re: Your inquiry with ALAB Property'
+    const lines = [
+      `Hello ${body.name},`,
+      '',
+      `Thank you for reaching out to ALAB Property.`,
+      body.propertyTitle
+        ? `We've received your inquiry about "${body.propertyTitle}" and would like to discuss further.`
+        : `We've received your inquiry and would like to discuss your interest in more detail.`,
+      '',
+      `Could you let me know a convenient time for a call, or feel free to reply here with any questions?`,
+      '',
+      `Warm regards,`,
+      `ALAB Property Team`,
+      `property@alabproperty.com`,
+    ]
+    return { subject, body: lines.join('\n') }
+  }
+  const subject = body.propertyTitle
+    ? `Re: Ваш запрос по объекту ${body.propertyTitle}`
+    : 'Re: Ваш запрос в ALAB Property'
+  const lines = [
+    `Здравствуйте, ${body.name}!`,
+    '',
+    `Благодарим за обращение в ALAB Property.`,
+    body.propertyTitle
+      ? `Мы получили ваш запрос по объекту «${body.propertyTitle}» и готовы предметно обсудить детали.`
+      : `Мы получили ваш запрос и хотели бы подробнее обсудить ваши задачи.`,
+    '',
+    `Подскажите, в какое время вам удобно созвониться, или можете ответить здесь — на любые вопросы я отвечу подробно.`,
+    '',
+    `С уважением,`,
+    `Команда ALAB Property`,
+    `property@alabproperty.com`,
+  ]
+  return { subject, body: lines.join('\n') }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
