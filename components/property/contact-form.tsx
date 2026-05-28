@@ -14,6 +14,7 @@ interface FormData {
   phone: string;
   channel: ContactChannel;
   message: string;
+  cryptoPayment: boolean;
 }
 
 interface FormErrors {
@@ -34,6 +35,7 @@ export function ContactForm({ property }: { property: Property }) {
     phone: '',
     channel: 'email',
     message: defaultMessage,
+    cryptoPayment: false,
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -105,7 +107,7 @@ export function ContactForm({ property }: { property: Property }) {
           type="button"
           onClick={() => {
             setSuccess(false);
-            setData({ name: '', email: '', phone: '', channel: 'email', message: defaultMessage });
+            setData({ name: '', email: '', phone: '', channel: 'email', message: defaultMessage, cryptoPayment: false });
           }}
           className="mt-8 rounded-full border border-cream/30 px-6 py-3 text-xs font-medium uppercase tracking-[0.16em] text-cream transition-colors hover:bg-cream/10"
         >
@@ -179,6 +181,31 @@ export function ContactForm({ property }: { property: Property }) {
             className="alab-form-input alab-form-textarea"
           />
         </Field>
+
+        {/* Crypto payment checkbox */}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setData({ ...data, cryptoPayment: !data.cryptoPayment })}
+            className={`flex h-5 w-5 shrink-0 items-center justify-center border transition-colors ${
+              data.cryptoPayment
+                ? 'border-teak-deep bg-teak-deep text-cream'
+                : 'border-[var(--line-strong)] bg-paper text-transparent hover:border-teak-warm'
+            }`}
+            aria-checked={data.cryptoPayment}
+            role="checkbox"
+          >
+            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+              <path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          <span
+            className="cursor-pointer select-none text-[13px] text-teak-warm"
+            onClick={() => setData({ ...data, cryptoPayment: !data.cryptoPayment })}
+          >
+            {locale === 'ru' ? 'Интересует оплата в криптовалюте' : 'Interested in crypto payment'}
+          </span>
+        </div>
       </div>
 
       <button

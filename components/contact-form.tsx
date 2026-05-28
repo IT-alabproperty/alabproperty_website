@@ -16,6 +16,7 @@ interface FormData {
   phone: string;
   message: string;
   preferredContact: 'email' | 'phone' | 'whatsapp';
+  cryptoPayment: boolean;
 }
 
 interface FormErrors {
@@ -30,6 +31,7 @@ const initial: FormData = {
   phone: '',
   message: '',
   preferredContact: 'email',
+  cryptoPayment: false,
 };
 
 export function ContactForm({ property }: ContactFormProps) {
@@ -67,6 +69,7 @@ export function ContactForm({ property }: ContactFormProps) {
     const payload = {
       ...data,
       message: data.message.trim() || defaultMessage,
+      cryptoPayment: data.cryptoPayment,
       propertyId: property.id,
       propertySlug: property.slug,
       propertyTitle: property.name[locale],
@@ -203,6 +206,31 @@ export function ContactForm({ property }: ContactFormProps) {
             className="alab-input resize-none"
           />
         </Field>
+      </div>
+
+      {/* Crypto payment checkbox */}
+      <div className="mt-5 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => update('cryptoPayment', !data.cryptoPayment)}
+          className={`flex h-5 w-5 shrink-0 items-center justify-center border transition-colors ${
+            data.cryptoPayment
+              ? 'border-teak-deep bg-teak-deep text-cream'
+              : 'border-[var(--line-strong)] text-transparent hover:border-teak-warm'
+          }`}
+          aria-checked={data.cryptoPayment}
+          role="checkbox"
+        >
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+            <path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        <span
+          className="cursor-pointer select-none text-[13px] text-teak-warm"
+          onClick={() => update('cryptoPayment', !data.cryptoPayment)}
+        >
+          {locale === 'ru' ? 'Интересует оплата в криптовалюте' : 'Interested in crypto payment'}
+        </span>
       </div>
 
       <button
