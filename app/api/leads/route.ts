@@ -191,6 +191,12 @@ async function handleLeadSubmission(req: NextRequest): Promise<NextResponse> {
       message: body.message,
       locale: body.locale,
     }).catch((e) => {
+      // Timeout on Apps Script ≠ failure — row often lands anyway. Log as warn,
+      // skip the tech-admin page (would spam every cold start).
+      if (e instanceof Error && e.name === 'SheetsTimeout') {
+        console.warn('[api/leads] sheets append timed out (row likely saved):', e.message)
+        return
+      }
       console.error('[api/leads] sheets append failed:', scrubTokens(e))
       notifyTechAdmins('error', {
         source: '/api/leads · sheets',

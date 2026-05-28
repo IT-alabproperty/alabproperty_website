@@ -65,8 +65,11 @@ export async function appendLeadRow(row: SheetsLeadRow): Promise<void> {
     row: buildRow(row),
   }
 
+  // Apps Script web apps respond after a 302 → script.googleusercontent.com hop
+  // which can be slow (5-15s on cold start). 25s timeout gives it room without
+  // blocking the lead handler indefinitely.
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 10_000)
+  const timeout = setTimeout(() => controller.abort(), 25_000)
   try {
     const res = await fetch(url, {
       method: 'POST',
@@ -83,6 +86,16 @@ export async function appendLeadRow(row: SheetsLeadRow): Promise<void> {
     if (!json.ok) {
       throw new Error(`Apps Script returned: ${json.error || 'unknown'}`)
     }
+  } catch (e) {
+    // AbortError ≠ failure — the row often lands in the sheet even when our
+    // client gave up. Re-throw as a tagged AbortError so the caller can decide
+    // not to alert tech admins on this case.
+    if (e instanceof Error && e.name === 'AbortError') {
+      const err = new Error('Apps Script webhook timed out (write may still have succeeded)')
+      err.name = 'SheetsTimeout'
+      throw err
+    }
+    throw e
   } finally {
     clearTimeout(timeout)
   }
