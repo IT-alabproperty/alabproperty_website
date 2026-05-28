@@ -22,7 +22,8 @@
     "react-dom": "19.0.0",
     "react-leaflet": "^5.0.0",
     "recharts": "^2.13.0",
-    "resend": "^6.12.3"
+    "resend": "^6.12.3",
+    "googleapis": "^121.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

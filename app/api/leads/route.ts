@@ -6,6 +6,9 @@ import { makeLimiter, rateLimit, clientIp } from '@/lib/rate-limit'
 import { scrubTokens } from '@/lib/log-safe'
 import { notifyTechAdmins } from '@/lib/notify-tech'
 import { renderLeadConfirmation } from '@/lib/email/lead-confirmation'
+import { renderReplyTemplate } from '@/lib/email/reply-template'
+import { signLeadId } from '@/lib/lead-tokens'
+import { appendLeadRow } from '@/lib/sheets/leads'
 
 // 5 leads per IP every 10 minutes. Anything beyond that is almost certainly a
 // bot — a real client doesn't submit the contact form six times.
@@ -169,6 +172,33 @@ async function handleLeadSubmission(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: result.error }, { status: 500 })
   }
 
+  const leadId = result.id ?? null
+
+  // 1b. Google Sheets mirror via Apps Script webhook — best effort.
+  //     Skipped silently if env unset; failures alert tech admins but
+  //     do NOT block lead delivery.
+  if (process.env.GOOGLE_SHEETS_WEBHOOK_URL) {
+    appendLeadRow({
+      date: new Date(),
+      name: body.name,
+      email: body.email,
+      phone: body.phone,
+      preferredContact: body.preferredContact,
+      propertyTitle: body.propertyTitle,
+      propertySlug: body.propertySlug,
+      cryptoPayment: body.cryptoPayment,
+      message: body.message,
+      locale: body.locale,
+    }).catch((e) => {
+      console.error('[api/leads] sheets append failed:', scrubTokens(e))
+      notifyTechAdmins('error', {
+        source: '/api/leads · sheets',
+        message: 'Google Sheets append failed (lead saved to DB)',
+        detail: e instanceof Error ? e.message : String(e),
+      }).catch(() => { /* never block */ })
+    })
+  }
+
   // 2. Send TWO emails in parallel — both non-fatal: the lead is already in
   //    Supabase, anything below is best-effort UX polish.
   //    (a) Plain-text inbox notification to the agency mailbox.
@@ -206,23 +236,69 @@ async function handleLeadSubmission(req: NextRequest): Promise<NextResponse> {
         locale: body.locale,
       })
 
-      await Promise.allSettled([
-        resend.emails.send({
-          from: 'ALAB Property <noreply@alabproperty.com>',
-          to: ['property@alabproperty.com'],
-          replyTo: body.email,
-          subject: `🔔 New Lead${body.propertyTitle ? `: ${body.propertyTitle}` : ''} — ${body.name}`,
-          text: adminLines.join('\n'),
-        }),
-        resend.emails.send({
+      const replyForAdmin = renderReplyTemplate({
+        name: body.name,
+        inquiry: adminLines.join('\n'),
+        propertyTitle: body.propertyTitle,
+        propertyLink: body.propertySlug ? `https://alabproperty.com/properties/${body.propertySlug}` : undefined,
+      })
+
+      // If Gmail OAuth env vars are configured, attempt to send the admin
+      // notification via Gmail API (sends on behalf of the configured account).
+      // Otherwise fall back to Resend for admin notification.
+      const gmailConfigured = !!(process.env.GMAIL_CLIENT_ID && process.env.GMAIL_CLIENT_SECRET && process.env.GMAIL_REFRESH_TOKEN && process.env.GMAIL_FROM)
+
+      if (gmailConfigured) {
+        try {
+          const { sendGmail } = await import('@/lib/email/gmail')
+          await sendGmail({
+            from: process.env.GMAIL_FROM!,
+            to: 'property@alabproperty.com',
+            subject: `🔔 New Lead${body.propertyTitle ? `: ${body.propertyTitle}` : ''} — ${body.name}`,
+            html: replyForAdmin.html,
+            text: replyForAdmin.text,
+          })
+        } catch (e) {
+          console.error('[api/leads] gmail send failed, falling back to resend:', e)
+          await resend.emails.send({
+            from: 'ALAB Property <noreply@alabproperty.com>',
+            to: ['property@alabproperty.com'],
+            replyTo: body.email,
+            subject: `🔔 New Lead${body.propertyTitle ? `: ${body.propertyTitle}` : ''} — ${body.name}`,
+            html: replyForAdmin.html,
+            text: replyForAdmin.text,
+          })
+        }
+
+        // Still send confirmation to the user via Resend
+        await resend.emails.send({
           from: 'ALAB Property <noreply@alabproperty.com>',
           to: [body.email],
           replyTo: 'property@alabproperty.com',
           subject: confirmation.subject,
           html: confirmation.html,
           text: confirmation.text,
-        }),
-      ])
+        })
+      } else {
+        await Promise.allSettled([
+          resend.emails.send({
+            from: 'ALAB Property <noreply@alabproperty.com>',
+            to: ['property@alabproperty.com'],
+            replyTo: body.email,
+            subject: `🔔 New Lead${body.propertyTitle ? `: ${body.propertyTitle}` : ''} — ${body.name}`,
+            html: replyForAdmin.html,
+            text: replyForAdmin.text,
+          }),
+          resend.emails.send({
+            from: 'ALAB Property <noreply@alabproperty.com>',
+            to: [body.email],
+            replyTo: 'property@alabproperty.com',
+            subject: confirmation.subject,
+            html: confirmation.html,
+            text: confirmation.text,
+          }),
+        ])
+      }
     }
   } catch (err) {
     console.error('[api/leads] email send failed (lead saved to DB):', scrubTokens(err))
@@ -283,14 +359,38 @@ async function handleLeadSubmission(req: NextRequest): Promise<NextResponse> {
         }
       }
 
+      const gmailDraftConfigured = !!(
+        process.env.GMAIL_CLIENT_ID &&
+        process.env.GMAIL_CLIENT_SECRET &&
+        process.env.GMAIL_REFRESH_TOKEN &&
+        process.env.GMAIL_FROM &&
+        leadId
+      )
+      const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://alabproperty.com').replace(/\/+$/, '')
+
       for (const r of recipients) {
         const tgLines = buildLeadMessage(body, r.lang)
-        // Inline keyboard with one-tap reply via Gmail compose. Reply language
-        // matches the customer's locale, not the recipient's notification_lang.
-        const replyTemplate = buildReplyTemplate(body)
-        const gmailCompose = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(body.email)}&su=${encodeURIComponent(replyTemplate.subject)}&body=${encodeURIComponent(replyTemplate.body)}`
+        // Inline keyboard "Reply in Gmail" button.
+        // Preferred flow: open our /draft endpoint which creates a Gmail draft
+        // via Gmail API (full HTML template) and redirects to Gmail web UI
+        // where admin can edit & send. Fallback to plain compose URL if Gmail
+        // OAuth is not configured.
+        let replyUrl: string
+        if (gmailDraftConfigured) {
+          const token = signLeadId(leadId!)
+          replyUrl = `${siteUrl}/api/leads/${encodeURIComponent(leadId!)}/draft?t=${token}`
+        } else {
+          const replyForCompose = renderReplyTemplate({
+            name: body.name,
+            inquiry: buildLeadMessage(body, r.lang),
+            propertyTitle: body.propertyTitle,
+            propertyLink: body.propertySlug ? `https://alabproperty.com/properties/${body.propertySlug}` : undefined,
+            locale: r.lang,
+          })
+          replyUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(body.email)}&su=${encodeURIComponent(replyForCompose.subject)}&body=${encodeURIComponent(replyForCompose.text)}`
+        }
         const replyButtonLabel = r.lang === 'en' ? '✉️ Reply in Gmail' : '✉️ Ответить в Gmail'
-        const inline_keyboard = [[{ text: replyButtonLabel, url: gmailCompose }]]
+        const inline_keyboard = [[{ text: replyButtonLabel, url: replyUrl }]]
         if (body.propertySlug) {
           const openLabel = r.lang === 'en' ? '🏠 Open property' : '🏠 Открыть объект'
           inline_keyboard.push([
