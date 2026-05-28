@@ -7,6 +7,7 @@ import { scrubTokens } from '@/lib/log-safe'
 import { notifyTechAdmins } from '@/lib/notify-tech'
 import { renderLeadConfirmation } from '@/lib/email/lead-confirmation'
 import { renderReplyTemplate } from '@/lib/email/reply-template'
+import { renderAdminLeadNotification } from '@/lib/email/admin-notification'
 import { signLeadId } from '@/lib/lead-tokens'
 import { appendLeadRow } from '@/lib/sheets/leads'
 
@@ -236,11 +237,16 @@ async function handleLeadSubmission(req: NextRequest): Promise<NextResponse> {
         locale: body.locale,
       })
 
-      const replyForAdmin = renderReplyTemplate({
+      const adminNotice = renderAdminLeadNotification({
         name: body.name,
-        inquiry: adminLines.join('\n'),
+        email: body.email,
+        phone: body.phone,
+        preferredContact: body.preferredContact,
+        message: body.message,
         propertyTitle: body.propertyTitle,
-        propertyLink: body.propertySlug ? `https://alabproperty.com/properties/${body.propertySlug}` : undefined,
+        propertySlug: body.propertySlug,
+        cryptoPayment: body.cryptoPayment,
+        locale: body.locale,
       })
 
       // If Gmail OAuth env vars are configured, attempt to send the admin
@@ -254,9 +260,9 @@ async function handleLeadSubmission(req: NextRequest): Promise<NextResponse> {
           await sendGmail({
             from: process.env.GMAIL_FROM!,
             to: 'property@alabproperty.com',
-            subject: `🔔 New Lead${body.propertyTitle ? `: ${body.propertyTitle}` : ''} — ${body.name}`,
-            html: replyForAdmin.html,
-            text: replyForAdmin.text,
+            subject: adminNotice.subject,
+            html: adminNotice.html,
+            text: adminNotice.text,
           })
         } catch (e) {
           console.error('[api/leads] gmail send failed, falling back to resend:', e)
@@ -264,9 +270,9 @@ async function handleLeadSubmission(req: NextRequest): Promise<NextResponse> {
             from: 'ALAB Property <noreply@alabproperty.com>',
             to: ['property@alabproperty.com'],
             replyTo: body.email,
-            subject: `🔔 New Lead${body.propertyTitle ? `: ${body.propertyTitle}` : ''} — ${body.name}`,
-            html: replyForAdmin.html,
-            text: replyForAdmin.text,
+            subject: adminNotice.subject,
+            html: adminNotice.html,
+            text: adminNotice.text,
           })
         }
 
@@ -285,9 +291,9 @@ async function handleLeadSubmission(req: NextRequest): Promise<NextResponse> {
             from: 'ALAB Property <noreply@alabproperty.com>',
             to: ['property@alabproperty.com'],
             replyTo: body.email,
-            subject: `🔔 New Lead${body.propertyTitle ? `: ${body.propertyTitle}` : ''} — ${body.name}`,
-            html: replyForAdmin.html,
-            text: replyForAdmin.text,
+            subject: adminNotice.subject,
+            html: adminNotice.html,
+            text: adminNotice.text,
           }),
           resend.emails.send({
             from: 'ALAB Property <noreply@alabproperty.com>',
