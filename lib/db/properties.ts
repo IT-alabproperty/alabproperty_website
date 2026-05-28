@@ -32,42 +32,66 @@ export type SortKey =
   | 'area-desc'
   | 'newest'
 
+function prettify(slug: string): string {
+  return String(slug ?? '')
+    .replace(/[_-]+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function ensureLocalized(value: any, fallback: string): LocalizedText {
+  if (value && typeof value === 'object') {
+    const ru = typeof value.ru === 'string' ? value.ru : (typeof value.en === 'string' ? value.en : fallback)
+    const en = typeof value.en === 'string' ? value.en : (typeof value.ru === 'string' ? value.ru : fallback)
+    return { ru, en } as LocalizedText
+  }
+  return { ru: fallback, en: fallback } as LocalizedText
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rowToProperty(row: any): Property {
+  const slug = String(row.slug ?? '')
+  const fallbackName = prettify(slug) || 'Untitled'
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const coords: any = row.coordinates
+  const validCoords =
+    coords && typeof coords === 'object' && typeof coords.lat === 'number' && typeof coords.lng === 'number'
+      ? { lat: coords.lat, lng: coords.lng }
+      : undefined
   return {
     id: row.id,
-    slug: row.slug,
+    slug,
     code: row.code ?? undefined,
-    priceThb: Number(row.price_thb),
-    deal: row.deal as PropertyDeal,
-    name: row.name as LocalizedText,
+    priceThb: Number(row.price_thb) || 0,
+    deal: (row.deal ?? 'sale') as PropertyDeal,
+    name: ensureLocalized(row.name, fallbackName),
     type: row.type as PropertyType,
     district: row.district as District,
-    address: (row.address ?? { ru: '', en: '' }) as LocalizedText,
-    areaSqm: Number(row.area_sqm),
+    address: ensureLocalized(row.address, ''),
+    areaSqm: Number(row.area_sqm) || 0,
     bedrooms: row.bedrooms ?? 0,
     bathrooms: row.bathrooms ?? 0,
     floor: row.floor ?? undefined,
     totalFloors: row.total_floors ?? undefined,
     yearBuilt: row.year_built ?? 0,
-    view: row.view ? (row.view as LocalizedText) : undefined,
-    ownership: row.ownership as OwnershipType,
+    view: row.view ? ensureLocalized(row.view, '') : undefined,
+    ownership: (row.ownership ?? 'freehold') as OwnershipType,
     leaseYearsRemaining: row.lease_years_remaining ?? undefined,
     status: (row.status ?? 'available') as PropertyStatus,
-    description: (row.description ?? { ru: '', en: '' }) as LocalizedText,
-    amenities: (row.amenities ?? []) as Amenity[],
-    tags: (row.tags ?? []) as PropertyTag[],
+    description: ensureLocalized(row.description, ''),
+    amenities: Array.isArray(row.amenities) ? (row.amenities as Amenity[]) : [],
+    tags: Array.isArray(row.tags) ? (row.tags as PropertyTag[]) : [],
     coverImage: row.cover_image ?? '',
     coverFocus: row.cover_focus ?? undefined,
     coverZoom: row.cover_zoom != null ? Number(row.cover_zoom) : undefined,
-    gallery: (row.gallery ?? []) as string[],
+    gallery: Array.isArray(row.gallery) ? (row.gallery as string[]) : [],
     city: row.city ? (row.city as City) : undefined,
-    developer: row.developer ? (row.developer as LocalizedText) : undefined,
+    developer: row.developer ? ensureLocalized(row.developer, '') : undefined,
     completionDate: row.completion_date ?? undefined,
-    coordinates:
-      row.coordinates
-        ? (row.coordinates as { lat: number; lng: number })
-        : undefined,
+    coordinates: validCoords,
     estimatedMonthlyRentThb:
       row.estimated_monthly_rent_thb != null
         ? Number(row.estimated_monthly_rent_thb)
