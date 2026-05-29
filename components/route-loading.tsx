@@ -6,16 +6,15 @@ import { useLocale } from 'next-intl'
 // Route-transition loader used as the [locale]/loading.tsx Suspense fallback.
 //
 // UX rules:
-//   1. Only show after the page has been pending for >1s — that matches the
-//      user's threshold for "wait, did my click do anything?". Faster pages
-//      finish before this even appears, so there's zero flicker.
-//   2. After ~2.5s the loader still hasn't given up → reveal a small "skip"
+//   1. Only show after the page has been pending for >2s — gives normal
+//      navigations breathing room and avoids any flash for snappy clicks.
+//   2. After ~4.5s the loader still hasn't given up → reveal a small "skip"
 //      affordance so the user can dismiss the splash and see whatever skeleton
 //      / partial content is mounting underneath. The page itself keeps
 //      loading — we just hide our overlay.
 //
-// The 1s delay is enforced via CSS `animation-delay: 1s` on a fade-in keyframe.
-// If Next.js unmounts the fallback (page loaded) before 1s, the animation
+// The 2s delay is enforced via CSS `animation-delay: 2s` on a fade-in keyframe.
+// If Next.js unmounts the fallback (page loaded) before 2s, the animation
 // never fires and nothing is painted.
 export function RouteLoading() {
   const locale = useLocale()
@@ -23,9 +22,10 @@ export function RouteLoading() {
   const [skipped, setSkipped] = useState(false)
 
   useEffect(() => {
-    // Skip button appears after 2.5s — we're past "patient wait", so let the
-    // user dismiss if they want to peek at whatever's mounting.
-    const t = setTimeout(() => setSkipVisible(true), 2500)
+    // Skip button appears after 4.5s — that's 2.5s after the overlay itself
+    // shows up. By that point the user has clearly been waiting and would
+    // appreciate the choice to dismiss.
+    const t = setTimeout(() => setSkipVisible(true), 4500)
     return () => clearTimeout(t)
   }, [])
 
@@ -50,7 +50,7 @@ export function RouteLoading() {
         justifyContent: 'center',
         backgroundColor: '#2B1810',
         opacity: 0,
-        animation: 'alabRouteLoaderFade 0.4s cubic-bezier(0.16,1,0.3,1) 1s forwards',
+        animation: 'alabRouteLoaderFade 0.4s cubic-bezier(0.16,1,0.3,1) 2s forwards',
         cursor: skipVisible ? 'pointer' : 'default',
         // Pointer events off until the skip button is meant to be tappable —
         // we don't want to swallow stray clicks during the first second.
