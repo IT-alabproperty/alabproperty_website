@@ -1,20 +1,26 @@
 'use client';
 
 import { useLocale } from 'next-intl';
-import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
+import { useRouter, usePathname } from '@/lib/i18n/routing';
 import { localeNames, locales } from '@/lib/i18n/config';
 import type { Locale } from '@/lib/types';
 
 export function LanguageSwitcher() {
   const currentLocale = useLocale() as Locale;
   const router = useRouter();
+  // Next-intl's usePathname returns the canonical path (without locale prefix);
+  // for dynamic routes like /properties/[slug] it returns the actual resolved
+  // value (e.g. /properties/sukhumvit-condo), so passing it straight through
+  // preserves the param when switching locale.
+  const pathname = usePathname();
   const [, startTransition] = useTransition();
 
   const switchTo = (locale: Locale) => {
     if (locale === currentLocale) return;
-    document.cookie = `NEXT_LOCALE=${locale}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
-    startTransition(() => router.refresh());
+    startTransition(() => {
+      router.replace(pathname, { locale });
+    });
   };
 
   return (

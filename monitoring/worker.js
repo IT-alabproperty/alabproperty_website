@@ -59,6 +59,11 @@ export default {
 
     // Only alert when status changes. Saves you from getting paged 12 times
     // an hour while you're already fixing the outage.
+    //
+    // NOTE: this is the ONLY place we write to KV — once per status transition.
+    // We used to also write a `lastCheckAt` on every tick for a debug endpoint;
+    // that burned 1440 writes/day (over the 1000/day free tier). Restore it
+    // only if you build the debug endpoint AND upgrade to Workers Paid.
     if (current !== last) {
       await env.STATE.put('lastStatus', current);
       await env.STATE.put('lastChangeAt', new Date().toISOString());
@@ -71,9 +76,6 @@ export default {
         tookMs,
       });
     }
-
-    // Always record latest check timestamp — useful for a debug endpoint later.
-    await env.STATE.put('lastCheckAt', new Date().toISOString());
   },
 };
 

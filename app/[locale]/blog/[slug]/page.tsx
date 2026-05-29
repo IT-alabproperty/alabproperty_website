@@ -1,12 +1,15 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import { Link } from '@/lib/i18n/routing';
 import Script from 'next/script';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { Eyebrow } from '@/components/ui/eyebrow';
 import { getPostBySlug, type BlogBlock } from '@/lib/db/blog';
-import { buildMetadata, SITE_URL, truncate } from '@/lib/seo';
+import { buildMetadata, SITE_URL, truncate, buildBreadcrumbsLd } from '@/lib/seo';
+
+// Refresh stale blog posts on demand (and at least daily).
+export const revalidate = 86400;
 import type { Locale } from '@/lib/types';
 import { BlogBlockImage } from '@/components/blog-block-image';
 import { BlogCoverImage } from '@/components/blog-cover-image';
@@ -141,12 +144,23 @@ export default async function BlogPostPage({
     articleBody: blocksToPlainText(post.blocks, locale) || undefined,
   };
 
+  const breadcrumbLd = buildBreadcrumbsLd([
+    { name: locale === 'ru' ? 'Главная' : 'Home', path: '/' },
+    { name: locale === 'ru' ? 'Блог' : 'Blog', path: '/blog' },
+    { name: title, path: `/blog/${post.slug}` },
+  ]);
+
   return (
     <main className="min-h-screen bg-paper px-6 pb-32 pt-32 sm:px-10 sm:pt-40 lg:px-14">
       <Script
         id={`ld-blogposting-${post.slug}`}
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(blogPostingLd) }}
+      />
+      <Script
+        id={`ld-crumbs-${post.slug}`}
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
       />
       <article className="mx-auto max-w-[820px]">
         <Link

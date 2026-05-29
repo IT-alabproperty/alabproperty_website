@@ -1,22 +1,21 @@
-import { getRequestConfig } from 'next-intl/server';
-import { cookies } from 'next/headers';
-import { defaultLocale, locales } from './config';
-import type { Locale } from '../types';
+import { getRequestConfig } from 'next-intl/server'
+import { routing } from './routing'
+import type { Locale } from '../types'
 
 /**
- * Cookie-based locale detection.
- * The user's choice persists across navigation; default falls back
- * to the Accept-Language header when the cookie isn't set.
+ * URL-based locale detection via the next-intl middleware.
+ * `requestLocale` is the segment from the URL ([locale] param); we validate it
+ * against the configured list and fall back to the default if missing/invalid.
  */
-export default getRequestConfig(async () => {
-  const cookieStore = await cookies();
-  const cookieLocale = cookieStore.get('NEXT_LOCALE')?.value as Locale | undefined;
-
-  const locale: Locale =
-    cookieLocale && locales.includes(cookieLocale) ? cookieLocale : defaultLocale;
+export default getRequestConfig(async ({ requestLocale }) => {
+  const requested = await requestLocale
+  const isKnown =
+    typeof requested === 'string' &&
+    (routing.locales as readonly string[]).includes(requested)
+  const locale: Locale = isKnown ? (requested as Locale) : routing.defaultLocale
 
   return {
     locale,
     messages: (await import(`./messages/${locale}.json`)).default,
-  };
-});
+  }
+})

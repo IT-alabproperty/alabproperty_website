@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { Link } from '@/lib/i18n/routing';
+import { usePathname } from '@/lib/i18n/routing';
 import { useTranslations } from 'next-intl';
 import { ArrowRight, Menu, X } from 'lucide-react';
 import { CurrencySwitcher } from './currency-switcher';

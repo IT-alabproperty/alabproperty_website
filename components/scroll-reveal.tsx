@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname } from '@/lib/i18n/routing';
 
 // Module-level: survives React re-renders/Strict Mode double-invoke,
 // resets only on full page reload.

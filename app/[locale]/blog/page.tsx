@@ -1,11 +1,15 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import { Link } from '@/lib/i18n/routing';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { Eyebrow } from '@/components/ui/eyebrow';
 import { getPublishedPosts } from '@/lib/db/blog';
 import { BlogCoverImage } from '@/components/blog-cover-image';
 import { buildMetadata } from '@/lib/seo';
 import type { Locale } from '@/lib/types';
+
+// Blog index refreshes daily — newly published posts surface within a day
+// without a full rebuild.
+export const revalidate = 86400;
 
 function formatDate(iso: string | null, locale: Locale): string {
   if (!iso) return '';

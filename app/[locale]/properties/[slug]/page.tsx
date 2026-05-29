@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import { Link } from '@/lib/i18n/routing';
 import Script from 'next/script';
 import { notFound } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
@@ -9,7 +9,7 @@ import {
   ShieldCheck, Eye, MapPin,
 } from 'lucide-react';
 import { getPropertyBySlug, getRelatedProperties, getAllProperties } from '@/lib/db/properties';
-import { getDistricts, getPropertyTypes, getCities } from '@/lib/db/taxonomy';
+import { getDistricts, getPropertyTypes, getCities, getAmenities, getTags } from '@/lib/db/taxonomy';
 import { PropertyGallery } from '@/components/property/property-gallery';
 import { RoiCalculator } from '@/components/property/roi-calculator';
 import { ContactForm } from '@/components/property/contact-form';
@@ -19,7 +19,7 @@ import { Eyebrow } from '@/components/ui/eyebrow';
 import { PriceDisplay } from '@/components/property/price-display';
 import { ProposalButton } from '@/components/proposal-button';
 import { ViewTracker } from '@/components/property/view-tracker';
-import { buildMetadata, SITE_URL, truncate } from '@/lib/seo';
+import { buildMetadata, SITE_URL, truncate, buildBreadcrumbsLd } from '@/lib/seo';
 import type { Locale, Property, Amenity } from '@/lib/types';
 
 /** "phrom-phong" → "Phrom Phong" — fallback when a slug isn't in any taxonomy row. */
@@ -39,6 +39,11 @@ function resolveLabel(rows: TaxRow[], slug: string | null | undefined, locale: L
   if (row) return row.name?.[locale] ?? row.name?.ru ?? prettifySlug(slug);
   return prettifySlug(slug);
 }
+
+// Regenerate listing pages on demand (and at least every hour) instead of
+// rebuilding on every request. Means Google sees fresh data without the cold
+// hit on first visit.
+export const revalidate = 3600
 
 export async function generateStaticParams() {
   const properties = await getAllProperties();
@@ -82,12 +87,14 @@ export async function generateMetadata({
 export default async function PropertyPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const locale = (await getLocale()) as Locale;
-  const [property, related, districts, types, cities] = await Promise.all([
+  const [property, related, districts, types, cities, amenities, tags] = await Promise.all([
     getPropertyBySlug(slug),
     getRelatedProperties(slug, 3),
     getDistricts(),
     getPropertyTypes(),
     getCities(),
+    getAmenities(),
+    getTags(),
   ]);
   if (!property) notFound();
 
@@ -139,6 +146,13 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
     },
   };
 
+  // Breadcrumb trail for Google rich results: Home › Properties › {Name}
+  const breadcrumbLd = buildBreadcrumbsLd([
+    { name: locale === 'ru' ? 'Главная' : 'Home', path: '/' },
+    { name: locale === 'ru' ? 'Объекты' : 'Properties', path: '/properties' },
+    { name: propertyName, path: `/properties/${property.slug}` },
+  ]);
+
   return (
     <>
       <Script
@@ -146,24 +160,33 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(listingLd) }}
       />
+      <Script
+        id={`ld-crumbs-${property.slug}`}
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+      />
       <ViewTracker slug={property.slug} />
       <PropertyContent
         property={property}
         related={related}
         districts={districts}
         types={types}
+        amenities={amenities}
+        tags={tags}
       />
     </>
   );
 }
 
 function PropertyContent({
-  property, related, districts, types,
+  property, related, districts, types, amenities, tags,
 }: {
   property: Property;
   related: Property[];
   districts: TaxRow[];
   types: TaxRow[];
+  amenities: TaxRow[];
+  tags: TaxRow[];
 }) {
   const locale = useLocale() as Locale;
   const t = useTranslations('PropertyPage');
@@ -176,6 +199,20 @@ function PropertyContent({
 
   const districtLabel = resolveLabel(districts, property.district, locale);
   const typeLabel = resolveLabel(types, property.type, locale);
+
+  // DB-first label resolution: row.name → i18n fallback → prettified slug.
+  // Lets admin-created custom amenities/tags render correctly while keeping
+  // existing seed slugs working via the i18n namespaces.
+  const resolveAmenityLabel = (slug: string): string => {
+    const row = amenities.find((r) => r.slug === slug);
+    if (row) return row.name?.[locale] ?? row.name?.ru ?? prettifySlug(slug);
+    try { return tAmenities(slug); } catch { return prettifySlug(slug); }
+  };
+  const resolveTagLabel = (slug: string): string => {
+    const row = tags.find((r) => r.slug === slug);
+    if (row) return row.name?.[locale] ?? row.name?.ru ?? prettifySlug(slug);
+    try { return tTags(slug); } catch { return prettifySlug(slug); }
+  };
   const ownershipLabel = (() => {
     try { return property.ownership ? tOwnership(property.ownership) : '—'; }
     catch { return property.ownership ?? '—'; }
@@ -288,7 +325,7 @@ function PropertyContent({
                       key={tag}
                       className="rounded-full border border-[var(--line-strong)] bg-paper px-4 py-2 text-sm tracking-tight text-teak"
                     >
-                      {tTags(tag)}
+                      {resolveTagLabel(tag)}
                     </span>
                   ))}
                 </div>
@@ -303,7 +340,7 @@ function PropertyContent({
                   {property.amenities.map((a: Amenity) => (
                     <li key={a} className="flex items-center gap-2">
                       <span className="h-1 w-1 rounded-full bg-gold-deep" />
-                      {tAmenities(a)}
+                      {resolveAmenityLabel(a)}
                     </li>
                   ))}
                 </ul>

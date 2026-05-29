@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { useLocale, useTranslations } from 'next-intl';
 import { getLocale, getTranslations } from 'next-intl/server';
-import Link from 'next/link';
+import { Link } from '@/lib/i18n/routing';
 import type { Locale } from '@/lib/types';
 import { LegalTrustSection } from '@/components/sections/legal-trust-section';
 import { buildMetadata } from '@/lib/seo';

@@ -7,6 +7,10 @@ import { getCities, getPropertyTypes, getDistricts } from '@/lib/db/taxonomy';
 import { buildMetadata } from '@/lib/seo';
 import type { Locale } from '@/lib/types';
 
+// Catalog refreshes hourly — new properties become visible to Google quickly
+// without a full rebuild on every request.
+export const revalidate = 3600;
+
 export async function generateMetadata(): Promise<Metadata> {
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations({ locale, namespace: 'SEO' });

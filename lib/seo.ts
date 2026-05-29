@@ -42,6 +42,13 @@ interface BuildMetadataInput {
  * Build a Metadata object with consistent OG/Twitter/canonical for every page.
  * Centralised so the per-page generateMetadata stays small and uniform.
  */
+/** Localize a path: default locale stays prefix-less, EN gets /en prefix. */
+export function localizedPath(path: string, locale: Locale): string {
+  const clean = path.startsWith('/') ? path : `/${path}`;
+  if (locale === 'ru') return clean === '/' ? '/' : clean;
+  return clean === '/' ? '/en' : `/en${clean}`;
+}
+
 export function buildMetadata({
   locale,
   title,
@@ -54,7 +61,10 @@ export function buildMetadata({
   ogType = 'website',
   noindex = false,
 }: BuildMetadataInput): Metadata {
-  const canonicalUrl = new URL(path, SITE_URL).toString();
+  const canonicalPath = localizedPath(path, locale);
+  const canonicalUrl = new URL(canonicalPath, SITE_URL).toString();
+  const ruUrl = new URL(localizedPath(path, 'ru'), SITE_URL).toString();
+  const enUrl = new URL(localizedPath(path, 'en'), SITE_URL).toString();
   const images = image
     ? [
         {
@@ -71,6 +81,13 @@ export function buildMetadata({
     description,
     alternates: {
       canonical: canonicalUrl,
+      // hreflang tells Google which URL serves which language. `x-default`
+      // points to RU (our primary market).
+      languages: {
+        ru: ruUrl,
+        en: enUrl,
+        'x-default': ruUrl,
+      },
     },
     openGraph: {
       type: ogType,
@@ -91,5 +108,31 @@ export function buildMetadata({
     robots: noindex
       ? { index: false, follow: false, nocache: true }
       : { index: true, follow: true },
+  };
+}
+
+/**
+ * BreadcrumbList JSON-LD. Google uses this to show the breadcrumb trail
+ * (instead of the raw URL) in search results — improves CTR by ~15%.
+ *
+ * Usage in a server component:
+ *   <Script
+ *     id="ld-breadcrumbs"
+ *     type="application/ld+json"
+ *     dangerouslySetInnerHTML={{ __html: JSON.stringify(buildBreadcrumbsLd([...])) }}
+ *   />
+ */
+export function buildBreadcrumbsLd(
+  items: Array<{ name: string; path: string }>,
+): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, idx) => ({
+      '@type': 'ListItem',
+      position: idx + 1,
+      name: item.name,
+      item: new URL(item.path, SITE_URL).toString(),
+    })),
   };
 }

@@ -134,7 +134,8 @@ export async function getAllProperties(
   city?: string,
   sort?: SortKey,
 ): Promise<Property[]> {
-  let query = supabase.from('properties').select('*')
+  // Only published rows reach the public site. Hidden/draft are admin-only.
+  let query = supabase.from('properties').select('*').eq('visibility', 'published')
 
   if (filters?.type) {
     query = query.eq('type', filters.type)
@@ -189,10 +190,13 @@ export async function filterProperties(
 }
 
 export async function getPropertyBySlug(slug: string): Promise<Property | null> {
+  // Returning null for non-published rows means the page renders notFound()
+  // → proper 404 (not a soft "hidden" page that Google could still index).
   const { data, error } = await supabase
     .from('properties')
     .select('*')
     .eq('slug', slug)
+    .eq('visibility', 'published')
     .single()
 
   if (error) {
@@ -210,6 +214,7 @@ export async function getPropertyByCode(code: string): Promise<Property | null> 
     .from('properties')
     .select('*')
     .eq('code', code.trim().toUpperCase())
+    .eq('visibility', 'published')
     .single()
 
   if (error) {
@@ -229,6 +234,7 @@ export async function getFeaturedProperties(limit = 3): Promise<Property[]> {
     .select('*')
     .eq('featured', true)
     .eq('status', 'available')
+    .eq('visibility', 'published')
     .limit(limit)
 
   if (!featuredError && featured && featured.length >= limit) {
@@ -240,6 +246,7 @@ export async function getFeaturedProperties(limit = 3): Promise<Property[]> {
     .from('properties')
     .select('*')
     .eq('status', 'available')
+    .eq('visibility', 'published')
     .contains('tags', ['investor-pick'])
     .limit(limit)
 
@@ -257,6 +264,7 @@ export async function getFeaturedProperties(limit = 3): Promise<Property[]> {
       .from('properties')
       .select('*')
       .eq('status', 'available')
+      .eq('visibility', 'published')
       .not('slug', 'in', `(${existingSlugs.map((s) => `"${s}"`).join(',')})`)
       .limit(limit - results.length)
 
@@ -279,6 +287,7 @@ export async function getRelatedProperties(
     .from('properties')
     .select('*')
     .eq('status', 'available')
+    .eq('visibility', 'published')
     .neq('slug', currentSlug)
 
   if (error) {

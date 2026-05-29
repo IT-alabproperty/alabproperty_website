@@ -371,12 +371,17 @@ async function handleLeadSubmission(req: NextRequest): Promise<NextResponse> {
         }
       }
 
-      const gmailDraftConfigured = !!(
-        process.env.GMAIL_CLIENT_ID &&
-        process.env.GMAIL_CLIENT_SECRET &&
-        process.env.GMAIL_REFRESH_TOKEN &&
-        process.env.GMAIL_FROM &&
-        leadId
+      // Draft URL is available if EITHER backend is configured:
+      //   - Apps Script webhook (preferred, no Cloud Console)
+      //   - Gmail OAuth (legacy)
+      const gmailDraftConfigured = !!leadId && (
+        !!process.env.GOOGLE_SHEETS_WEBHOOK_URL ||
+        !!(
+          process.env.GMAIL_CLIENT_ID &&
+          process.env.GMAIL_CLIENT_SECRET &&
+          process.env.GMAIL_REFRESH_TOKEN &&
+          process.env.GMAIL_FROM
+        )
       )
       const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://alabproperty.com').replace(/\/+$/, '')
 
