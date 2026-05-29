@@ -10,6 +10,7 @@ import type {
   PropertyTag,
   LocalizedText,
 } from '../types'
+import { unstable_cache } from 'next/cache'
 import { supabase } from '../supabase'
 
 export interface PropertyFilters {
@@ -237,7 +238,7 @@ export async function getPropertyByCode(code: string): Promise<Property | null> 
   return data ? rowToProperty(data) : null
 }
 
-export async function getFeaturedProperties(limit = 3): Promise<Property[]> {
+async function fetchFeaturedPropertiesUncached(limit: number): Promise<Property[]> {
   // First try properties explicitly marked featured
   const { data: featured, error: featuredError } = await supabase
     .from('properties')
@@ -285,6 +286,15 @@ export async function getFeaturedProperties(limit = 3): Promise<Property[]> {
 
   return results.slice(0, limit)
 }
+
+// Cached 5 min — featured changes rarely, and this lives on the home page
+// which gets the most traffic. Tag-based revalidation when properties update
+// can be added via revalidateTag('properties') from the admin save handler.
+export const getFeaturedProperties = unstable_cache(
+  (limit: number = 3) => fetchFeaturedPropertiesUncached(limit),
+  ['properties:featured'],
+  { revalidate: 300, tags: ['properties', 'properties:featured'] },
+)
 
 export async function getRelatedProperties(
   currentSlug: string,

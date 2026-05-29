@@ -69,8 +69,24 @@ export async function generateMetadata({
     });
   }
   const name = property.name[locale] || property.name.ru;
+  // Meta description = key specs upfront (price, bedrooms, area, district)
+  // + a teaser from the long description. This is what Google shows in the
+  // result snippet — packing specs gives users an at-a-glance value prop.
+  const specsParts: string[] = [];
+  if (property.bedrooms) {
+    specsParts.push(locale === 'ru' ? `${property.bedrooms}-комн.` : `${property.bedrooms}-bed`);
+  }
+  if (property.areaSqm) specsParts.push(`${property.areaSqm} m²`);
+  if (property.priceThb) {
+    const millions = property.priceThb >= 1_000_000 ? `฿${Math.round(property.priceThb / 100_000) / 10}M` : `฿${property.priceThb}`;
+    specsParts.push(locale === 'ru' ? `от ${millions}` : `from ${millions}`);
+  }
+  const localityForMeta = property.address?.[locale] || property.address?.ru;
+  if (localityForMeta) specsParts.push(localityForMeta);
+  const specsLine = specsParts.join(' · ');
+  const longText = property.description[locale] || property.description.ru || '';
   const description = truncate(
-    property.description[locale] || property.description.ru || property.address[locale] || '',
+    [specsLine, longText].filter(Boolean).join(' — '),
     160,
   );
   return buildMetadata({
@@ -134,6 +150,8 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
           longitude: property.coordinates.lng,
         }
       : undefined,
+    // Offer: price + validity. priceValidUntil = a year out (THB-denominated
+    // listings typically hold price for months; Google requires a date).
     offers: {
       '@type': 'Offer',
       price: property.priceThb,
@@ -143,7 +161,15 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
           ? 'https://schema.org/InStock'
           : 'https://schema.org/OutOfStock',
       url: `${SITE_URL}/properties/${property.slug}`,
+      priceValidUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10),
     },
+    // Gallery as additional images — gives Google something to show in the
+    // image-rich result row.
+    ...(property.gallery && property.gallery.length > 0
+      ? { photo: property.gallery.slice(0, 8).map((url) => ({ '@type': 'ImageObject', url })) }
+      : {}),
   };
 
   // Breadcrumb trail for Google rich results: Home › Properties › {Name}
@@ -220,16 +246,35 @@ function PropertyContent({
 
   return (
     <main className="min-h-screen bg-paper pt-28 sm:pt-32">
-      {/* Top bar with back link */}
-      <div className="mx-auto max-w-[1280px] px-6 sm:px-10 lg:px-14">
-        <Link
-          href="/properties"
-          className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-muted transition-colors hover:text-gold-deep"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.75} />
-          {t('backToCatalog')}
-        </Link>
-      </div>
+      {/* Breadcrumb trail — semantic <nav> + visible chevron crumbs.
+          Matches the BreadcrumbList JSON-LD emitted in the page <head> so
+          screen readers, sighted users and Google all see the same path. */}
+      <nav
+        aria-label={locale === 'ru' ? 'Хлебные крошки' : 'Breadcrumb'}
+        className="mx-auto max-w-[1280px] px-6 sm:px-10 lg:px-14"
+      >
+        <ol className="flex flex-wrap items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-muted">
+          <li>
+            <Link href="/" className="transition-colors hover:text-gold-deep">
+              {locale === 'ru' ? 'Главная' : 'Home'}
+            </Link>
+          </li>
+          <li aria-hidden="true" className="text-muted/50">/</li>
+          <li>
+            <Link
+              href="/properties"
+              className="inline-flex items-center gap-1.5 transition-colors hover:text-gold-deep"
+            >
+              <ArrowLeft className="h-3 w-3" strokeWidth={1.75} />
+              {t('backToCatalog')}
+            </Link>
+          </li>
+          <li aria-hidden="true" className="text-muted/50">/</li>
+          <li aria-current="page" className="max-w-[60vw] truncate text-teak/70">
+            {property.name[locale]}
+          </li>
+        </ol>
+      </nav>
 
       {/* Header */}
       <header className="mx-auto mt-8 max-w-[1280px] px-6 sm:px-10 lg:px-14">

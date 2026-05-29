@@ -58,9 +58,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry(r.path, now, r.changeFrequency, r.priority),
   );
 
-  const propertyEntries: MetadataRoute.Sitemap = properties.map((p) =>
-    entry(`/properties/${p.slug}`, now, 'weekly', 0.8),
-  );
+  const propertyEntries: MetadataRoute.Sitemap = properties.map((p) => {
+    const e = entry(`/properties/${p.slug}`, now, 'weekly', 0.8);
+    // Attach property images so they show up in Google Image search.
+    const imgs = [p.coverImage, ...(p.gallery ?? [])].filter(
+      (u): u is string => typeof u === 'string' && u.length > 0,
+    );
+    if (imgs.length > 0) {
+      e.images = imgs.slice(0, 10); // first 10 — Google ignores beyond
+    }
+    return e;
+  });
 
   const postEntries: MetadataRoute.Sitemap = posts.map((post) =>
     entry(
