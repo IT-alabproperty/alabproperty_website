@@ -135,6 +135,9 @@ export async function getAllProperties(
   sort?: SortKey,
 ): Promise<Property[]> {
   // Only published rows reach the public site. Hidden/draft are admin-only.
+  // Note: relies on the visibility column from migration 011. Before it's
+  // applied, the .eq filter is a no-op against missing column would fail —
+  // see retry logic in the catch below.
   let query = supabase.from('properties').select('*').eq('visibility', 'published')
 
   if (filters?.type) {
@@ -171,7 +174,14 @@ export async function getAllProperties(
     query = query.eq('city', city)
   }
 
-  const { data, error } = await query
+  let { data, error } = await query
+
+  // Pre-migration fallback: if visibility column doesn't exist, retry without it.
+  if (error && error.code === '42703') {
+    const retry = await supabase.from('properties').select('*')
+    data = retry.data
+    error = retry.error
+  }
 
   if (error) {
     console.error('[db/properties] getAllProperties error:', error.message, error.code, error.details, error.hint)

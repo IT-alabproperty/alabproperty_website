@@ -345,6 +345,19 @@ body[data-navigated] .alab-reveal {
   50%       { opacity: 0.14; }
 }
 
+/* Route-transition loader (RouteLoading component).
+   - Fade keyframe is run with a 1s `animation-delay` so the loader stays
+     invisible during fast page loads.
+   - Pulse keyframe gives the centred mark a gentle continuous breathing. */
+@keyframes alabRouteLoaderFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes alabRouteLoaderPulse {
+  0%, 100% { transform: scale(1);     opacity: 0.95; }
+  50%       { transform: scale(1.035); opacity: 1; }
+}
+
 /* ============================================================
    404 PAGE ANIMATIONS
    ============================================================ */
