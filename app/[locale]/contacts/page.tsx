@@ -65,10 +65,10 @@ export default async function ContactsPage() {
               <p className="flex items-start gap-3 text-[15px] leading-[1.6]">
                 <Mail className="mt-0.5 h-4 w-4 shrink-0 text-gold-deep" strokeWidth={1.5} />
                 <a
-                  href="mailto:info@alabproperty.com"
+                  href="mailto:property@alabproperty.com"
                   className="text-teak transition-colors hover:text-gold-deep"
                 >
-                  info@alabproperty.com
+                  property@alabproperty.com
                 </a>
               </p>
             </div>
