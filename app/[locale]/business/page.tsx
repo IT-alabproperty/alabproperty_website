@@ -150,7 +150,7 @@ export default async function BusinessPage() {
       </header>
 
       {/* Affiliate notice */}
-      <aside className="mx-auto mb-24 max-w-[860px] rounded-lg border border-[var(--line)] bg-cream/60 p-6 alab-reveal sm:p-8">
+      {/* <aside className="mx-auto mb-24 max-w-[860px] rounded-lg border border-[var(--line)] bg-cream/60 p-6 alab-reveal sm:p-8">
         <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.2em] text-gold-deep">
           {isRu ? 'Юридическое сопровождение' : 'Legal matters managed by'} — A.L.A.B Consultant
         </p>
@@ -167,7 +167,7 @@ export default async function BusinessPage() {
             alabconsultant.com
           </a>
         </p>
-      </aside>
+      </aside> */}
 
       {/* Sections */}
       <div className="mx-auto max-w-[860px]">

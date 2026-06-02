@@ -72,10 +72,10 @@ export default async function ContactsPage() {
                 </a>
               </p>
             </div>
-            <div className="rounded-lg border border-[var(--line)] bg-cream/50 p-5">
+            {/* <div className="rounded-lg border border-[var(--line)] bg-cream/50 p-5">
               <p className="text-[13px] leading-[1.6] text-teak-warm">
                 {isRu
-                  ? 'Юридические вопросы по сделкам ведёт A.L.A.B Consultant Co., Ltd. — наша аффилированная юридическая фирма.'
+                  ? 'Юридические вопросы по сделкам ведёт A.L.A.B Consultant Co., Ltd. - наша аффилированная юридическая фирма.'
                   : 'Legal matters around transactions are handled by A.L.A.B Consultant Co., Ltd. — our affiliated law firm.'}{' '}
                 <a
                   href="https://alabconsultant.com"
@@ -86,7 +86,7 @@ export default async function ContactsPage() {
                   alabconsultant.com
                 </a>
               </p>
-            </div>
+            </div> */}
           </aside>
         </div>
       </div>
