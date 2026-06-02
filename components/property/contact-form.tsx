@@ -23,11 +23,15 @@ interface FormErrors {
   phone?: string;
 }
 
-export function ContactForm({ property }: { property: Property }) {
+// `property` is optional so the same form can be used on the property detail
+// pages (with a pre-filled "I'd like to know more about X" message) and on
+// the generic /contacts page (no property, blank message, no property fields
+// sent to /api/leads).
+export function ContactForm({ property }: { property?: Property }) {
   const t = useTranslations('Contact');
   const locale = useLocale() as Locale;
 
-  const defaultMessage = t('defaultMessage', { name: property.name[locale] });
+  const defaultMessage = property ? t('defaultMessage', { name: property.name[locale] }) : '';
 
   const [data, setData] = useState<FormData>({
     name: '',
@@ -65,9 +69,13 @@ export function ContactForm({ property }: { property: Property }) {
     setSubmitError(null);
 
     const payload = {
-      propertyId: property.id,
-      propertySlug: property.slug,
-      propertyTitle: property.name[locale],
+      ...(property
+        ? {
+            propertyId: property.id,
+            propertySlug: property.slug,
+            propertyTitle: property.name[locale],
+          }
+        : {}),
       ...data,
       preferredContact: data.channel,
       locale,

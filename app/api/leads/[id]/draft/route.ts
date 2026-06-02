@@ -3,6 +3,20 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { renderAgentReply } from '@/lib/email/agent-reply'
 import { verifyLeadToken } from '@/lib/lead-tokens'
 
+/** Friendly HTML page instead of raw JSON — clicked from Telegram, opened
+ *  in the browser, so a human should see something readable. */
+function errorPage(title: string, body: string, status = 500) {
+  return new NextResponse(
+    `<!doctype html><html><head><meta charset="utf-8"/><title>${title}</title>
+     <style>body{font-family:system-ui,sans-serif;background:#2B1810;color:#F5EFE6;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;margin:0;text-align:center}
+     h1{font-size:22px;font-weight:500;margin:0 0 12px;color:#C9A961}
+     p{font-size:14px;line-height:1.6;color:rgba(245,239,230,0.75);max-width:480px}
+     code{display:inline-block;margin-top:12px;padding:6px 10px;background:rgba(245,239,230,0.08);border-radius:6px;font-size:12px;color:#C9A961}</style>
+     </head><body><h1>${title}</h1><p>${body}</p></body></html>`,
+    { status, headers: { 'Content-Type': 'text/html; charset=utf-8' } },
+  )
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -10,18 +24,41 @@ export async function GET(
   const { id } = await params
   const token = req.nextUrl.searchParams.get('t') || ''
 
+  if (!id || id === 'null' || id === 'undefined') {
+    console.error('[api/leads/draft] empty/null id in URL')
+    return errorPage(
+      'Invalid link',
+      'This reply link is missing the lead id. The TG notification that produced it was sent before the fix was deployed — try a fresh lead.',
+      400,
+    )
+  }
+
   if (!verifyLeadToken(id, token)) {
-    return NextResponse.json({ error: 'invalid token' }, { status: 403 })
+    console.error('[api/leads/draft] invalid token for id', id)
+    return errorPage(
+      'Link signature invalid',
+      'This reply link can\'t be verified. It may have been tampered with, or the server secret rotated after the TG notification was sent.',
+      403,
+    )
   }
 
   const { data: lead, error } = await supabaseAdmin
     .from('leads')
     .select('id, name, email, property_title, property_slug')
     .eq('id', id)
-    .single()
+    .maybeSingle()
 
-  if (error || !lead) {
-    return NextResponse.json({ error: 'lead not found' }, { status: 404 })
+  if (error) {
+    console.error('[api/leads/draft] supabase select failed:', error.message, 'id=', id)
+    return errorPage('Database error', error.message, 500)
+  }
+  if (!lead) {
+    console.error('[api/leads/draft] lead not in DB, id=', id)
+    return errorPage(
+      'Lead not found',
+      `No lead with this id exists anymore. It may have been deleted from Supabase. The link was for lead <code>${id.slice(0, 8)}…</code>.`,
+      404,
+    )
   }
 
   const tpl = renderAgentReply({

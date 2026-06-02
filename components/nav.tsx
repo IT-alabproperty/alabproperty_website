@@ -52,9 +52,10 @@ export function Nav() {
   const navLinks: { href: string; label: string; mobileLabel?: string }[] = [
     { href: '/', label: t('home') },
     { href: '/properties', label: t('properties') },
-    // { href: '/business', label: t('business'), mobileLabel: t('businessFull') },
+    { href: '/business', label: t('business'), mobileLabel: t('businessFull') },
+    { href: '/legal', label: t('legal') },
     { href: '/blog', label: t('blog') },
-    // { href: '/legal', label: t('legal') },
+    { href: '/contacts', label: t('contacts') },
   ];
 
   return (

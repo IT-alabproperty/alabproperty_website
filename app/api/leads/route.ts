@@ -174,6 +174,12 @@ async function handleLeadSubmission(req: NextRequest): Promise<NextResponse> {
   }
 
   const leadId = result.id ?? null
+  if (!leadId) {
+    // Insert succeeded but no id came back — odd, but defend against it so
+    // the rest of the pipeline (email + TG) still works without a broken
+    // draft URL. `gmailDraftConfigured` below already guards on !!leadId.
+    console.warn('[api/leads] insert returned no id — draft URL will not be generated')
+  }
 
   // 1b. Google Sheets mirror via Apps Script webhook — best effort.
   //     Skipped silently if env unset; failures alert tech admins but

@@ -32,8 +32,12 @@ export default {
     try {
       const res = await fetch(url, {
         cf: { cacheTtl: 0, cacheEverything: false },
-        // 10s timeout — beyond that the site is effectively down for users.
-        signal: AbortSignal.timeout(10_000),
+        // 25s timeout. Vercel cold-start (1-3s) + Supabase round-trip
+        // (50-300ms) can occasionally tail-spike to 5-8s without anything
+        // being actually broken. A genuine outage takes well over 25s
+        // before recovery, so this threshold keeps false-positives at zero
+        // while still paging within ~30s of a real incident.
+        signal: AbortSignal.timeout(25_000),
       });
       httpCode = res.status;
       if (res.ok) {

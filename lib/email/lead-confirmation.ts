@@ -69,7 +69,7 @@ const DICT: Record<'ru' | 'en', Dict> = {
     intro: 'Благодарим вас за обращение в ALAB Property — мы получили вашу заявку.',
     responseTime: 'Юридический консультант ALAB свяжется с вами в течение 12 часов, чтобы обсудить детали и ответить на вопросы.',
     propertyMention: (title) => `Мы подготовим подробную информацию по объекту «${title}» и пришлём её вместе с ответом.`,
-    cryptoMention: 'Вы отметили интерес к оплате в криптовалюте — мы подготовим прозрачные варианты сделки с использованием USDT (TRC-20) и сопроводим юридически каждый шаг.',
+    cryptoMention: 'Вы отметили интерес к оплате в криптовалюте — мы подготовим прозрачные варианты сделки с использованием USDT (ERC-20) и сопроводим юридически каждый шаг.',
     recapHeading: 'Что было отправлено',
     recapName: 'Имя',
     recapEmail: 'Email',
@@ -92,7 +92,7 @@ const DICT: Record<'ru' | 'en', Dict> = {
     intro: 'Thank you for reaching out to ALAB Property — we have received your enquiry.',
     responseTime: 'An ALAB legal consultant will contact you within 12 hours to discuss the details and answer your questions.',
     propertyMention: (title) => `We will prepare a detailed brief on “${title}” and send it together with our response.`,
-    cryptoMention: 'You indicated interest in cryptocurrency payment — we will prepare transparent transaction options using USDT (TRC-20) with full legal accompaniment at every step.',
+    cryptoMention: 'You indicated interest in cryptocurrency payment — we will prepare transparent transaction options using USDT (ERC-20) with full legal accompaniment at every step.',
     recapHeading: 'What you sent us',
     recapName: 'Name',
     recapEmail: 'Email',
@@ -396,7 +396,7 @@ export function renderLeadConfirmation(input: LeadConfirmationInput): RenderedEm
  *            3. Greeting "Здравствуйте, Иван Петров!"
  *            4. Intro + 12-hour response promise
  *            5. Property mention paragraph ("Мы подготовим подробную информацию по объекту «...»")
- *            6. Crypto mention paragraph (USDT TRC-20)
+ *            6. Crypto mention paragraph (USDT ERC-20)
  *            7. "Открыть объект" CTA button (because propertySlug present)
  *            8. Cream recap box: Имя / Email / Телефон / Объект / Сообщение
  *            9. Signoff "С уважением, Команда ALAB Property"

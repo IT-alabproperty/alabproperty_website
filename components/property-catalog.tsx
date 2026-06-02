@@ -624,16 +624,35 @@ function FilterPanel({
         }
         .alab-filter-select {
           width: 100%;
-          padding: 10px 14px;
+          padding: 10px 36px 10px 18px;
           border: 1px solid var(--line-strong);
-          border-radius: 6px;
-          background: white;
+          border-radius: 9999px;
+          background-color: white;
+          /* Custom gold chevron — replaces the default OS arrow so the price
+             selects match the pill-style neighbours (bedrooms, ownership). */
+          background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'><path d='M1 1l4 4 4-4' stroke='%23A8882F' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+          background-repeat: no-repeat;
+          background-position: right 16px center;
+          background-size: 10px 6px;
+          appearance: none;
+          -webkit-appearance: none;
+          -moz-appearance: none;
           font-family: inherit;
           font-size: 13px;
+          font-weight: 500;
           color: var(--teak);
           outline: none;
+          cursor: pointer;
+          transition: border-color 0.2s, background-color 0.2s, color 0.2s;
         }
-        .alab-filter-select:focus { border-color: var(--gold-deep); }
+        .alab-filter-select:hover {
+          border-color: var(--gold-deep);
+          color: var(--teak-deep);
+        }
+        .alab-filter-select:focus {
+          border-color: var(--gold-deep);
+          background-color: var(--paper);
+        }
       `}</style>
     </>
   );

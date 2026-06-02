@@ -295,9 +295,12 @@ export function PropertyCard({
 
 /** Stacked images that cross-fade. Only the active one is opaque.
  *  The cover (index 0) honours coverFocus/coverZoom — set in the admin crop UI.
- *  If an image fails to load (network issue, blocked CDN, expired URL), we drop
- *  it from the stack so the user sees the on-brand placeholder instead of the
- *  browser's broken-image glyph. */
+ *
+ *  Placeholder behaviour: we show the on-brand ImagePlaceholder ONLY when
+ *  every image URL has failed via <Image onError>. Crucially, an `onLoad` on
+ *  the same URL UN-marks it from broken — so a transient hiccup (dev-mode
+ *  optimizer throttle, intermittent CDN blip) self-recovers instead of
+ *  permanently sticking the card on the placeholder. */
 function ImageStack({
   images,
   activeIndex,
@@ -312,29 +315,26 @@ function ImageStack({
   const zoom = coverZoom && Number.isFinite(coverZoom) ? coverZoom : 1;
   const position = coverFocus || '50% 50%';
   const [broken, setBroken] = useState<Set<string>>(new Set());
-  // Track which sources have actually loaded so we can hide the skeleton
-  // only when something real is on screen (otherwise the user sees a flash
-  // of empty card while the cover is still in-flight).
   const [loaded, setLoaded] = useState<Set<string>>(new Set());
 
-  const allBroken = images.length > 0 && images.every((src) => !src || broken.has(src));
+  const usable = images.filter((src) => !!src);
+  const allBroken = usable.length > 0 && usable.every((src) => broken.has(src) && !loaded.has(src));
   if (allBroken) return <ImagePlaceholder />;
 
-  const anyLoaded = images.some((src) => src && loaded.has(src));
+  const anyLoaded = usable.some((src) => loaded.has(src));
 
   return (
     <>
       {!anyLoaded && (
         <div className="absolute inset-0 alab-image-skeleton" aria-hidden="true" />
       )}
-      {images.map((src, i) => {
-        if (!src || broken.has(src)) return null;
+      {usable.map((src, i) => {
         const isCover = i === 0;
         const isActive = i === activeIndex;
         // sizes — подсказка браузеру: ширина картинки на разных вьюпортах.
-        // Этого достаточно чтобы Next.js отдавал нужный размер из srcset,
-        // вместо полноразмерного оригинала.
-        const sizes = '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 320px';
+        // 480px (= 960px asset @ 2× DPR) keeps the cover crisp on retina
+        // without pushing the optimizer past a usable file size.
+        const sizes = '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 480px';
         return (
           <Image
             key={src}
@@ -351,14 +351,21 @@ function ImageStack({
               transform: isCover ? `scale(${zoom})` : undefined,
               transformOrigin: isCover ? position : undefined,
             }}
-            onLoad={() =>
+            onLoad={() => {
               setLoaded((prev) => {
                 if (prev.has(src)) return prev;
                 const next = new Set(prev);
                 next.add(src);
                 return next;
-              })
-            }
+              });
+              // A successful load unmarks any previous transient failure.
+              setBroken((prev) => {
+                if (!prev.has(src)) return prev;
+                const next = new Set(prev);
+                next.delete(src);
+                return next;
+              });
+            }}
             onError={() =>
               setBroken((prev) => {
                 if (prev.has(src)) return prev;
