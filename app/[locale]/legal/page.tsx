@@ -360,21 +360,19 @@ function TagRow({
   tags: Array<{ ru: string; en: string; accent?: boolean }>;
   locale: Locale;
 }) {
+  // Inline list separated by · — matches the old LegalTrustSection note style
+  // ("Title deed check · Encumbrance search · …") rather than rounded pills.
   return (
-    <div className="mt-4 flex flex-wrap gap-2">
+    <p className="mt-5 text-[11px] uppercase tracking-[0.18em] text-teak/45">
       {tags.map((tag, i) => (
-        <span
-          key={i}
-          className={
-            tag.accent
-              ? 'rounded-full border border-gold/60 bg-gold/15 px-4 py-2 text-[12px] font-semibold tracking-tight text-gold-deep'
-              : 'rounded-full border border-[var(--line-strong)] bg-paper px-4 py-2 text-[12px] tracking-tight text-teak'
-          }
-        >
-          {locale === 'ru' ? tag.ru : tag.en}
+        <span key={i}>
+          {i > 0 && <span className="px-2 text-teak/25">·</span>}
+          <span className={tag.accent ? 'font-semibold text-gold-deep' : ''}>
+            {locale === 'ru' ? tag.ru : tag.en}
+          </span>
         </span>
       ))}
-    </div>
+    </p>
   );
 }
 
@@ -393,16 +391,14 @@ function CardGrid({ cards, locale }: { cards: Card[]; locale: Locale }) {
             {locale === 'ru' ? card.body.ru : card.body.en}
           </p>
           {card.tags && (
-            <div className="flex flex-wrap gap-1.5">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-teak/45">
               {card.tags.map((tag, j) => (
-                <span
-                  key={j}
-                  className="rounded-full border border-[var(--line-strong)] bg-cream/30 px-2.5 py-1 text-[11px] tracking-tight text-teak"
-                >
+                <span key={j}>
+                  {j > 0 && <span className="px-2 text-teak/25">·</span>}
                   {locale === 'ru' ? tag.ru : tag.en}
                 </span>
               ))}
-            </div>
+            </p>
           )}
         </div>
       ))}

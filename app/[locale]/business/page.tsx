@@ -296,17 +296,17 @@ function TagRow({
   tags: Array<{ ru: string; en: string }>;
   locale: Locale;
 }) {
+  // Inline list separated by · — matches the old LegalTrustSection note style
+  // ("Foreign investors · Individual buyers · …") rather than rounded pills.
   return (
-    <div className="mt-4 flex flex-wrap gap-2">
+    <p className="mt-5 text-[11px] uppercase tracking-[0.18em] text-teak/45">
       {tags.map((tag, i) => (
-        <span
-          key={i}
-          className="rounded-full border border-[var(--line-strong)] bg-paper px-4 py-2 text-[12px] tracking-tight text-teak"
-        >
+        <span key={i}>
+          {i > 0 && <span className="px-2 text-teak/25">·</span>}
           {locale === 'ru' ? tag.ru : tag.en}
         </span>
       ))}
-    </div>
+    </p>
   );
 }
 
