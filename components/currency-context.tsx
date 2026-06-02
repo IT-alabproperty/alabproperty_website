@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Currency } from '@/lib/types';
-import { formatPrice as formatPriceUtil, FALLBACK_RATES } from '@/lib/currency';
+import { formatPrice as formatPriceUtil, formatPriceFull as formatPriceFullUtil, FALLBACK_RATES } from '@/lib/currency';
 
 interface CurrencyContextValue {
   currency: Currency;
@@ -12,6 +12,9 @@ interface CurrencyContextValue {
   /** ISO timestamp of last successful upstream update, null if we're on fallback. */
   updatedAt: string | null;
   format: (thbAmount: number) => string;
+  /** Full (non-truncated) format with locale thousands separators. Use on
+   *  property detail page where the exact figure matters. */
+  formatFull: (thbAmount: number) => string;
 }
 
 const CurrencyContext = createContext<CurrencyContextValue | null>(null);
@@ -107,8 +110,13 @@ export function CurrencyProvider({
     [currency, locale, rates],
   );
 
+  const formatFull = useMemo(
+    () => (thbAmount: number) => formatPriceFullUtil(thbAmount, currency, locale, rates),
+    [currency, locale, rates],
+  );
+
   return (
-    <CurrencyContext.Provider value={{ currency, setCurrency, rates, updatedAt, format }}>
+    <CurrencyContext.Provider value={{ currency, setCurrency, rates, updatedAt, format, formatFull }}>
       {children}
     </CurrencyContext.Provider>
   );

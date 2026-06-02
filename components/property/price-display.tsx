@@ -14,7 +14,7 @@ export function PriceDisplay({
   areaSqm: number;
 }) {
   const t = useTranslations('Deal');
-  const { format, currency } = useCurrency();
+  const { formatFull, currency } = useCurrency();
 
   const pricePerSqm = priceThb / areaSqm;
 
@@ -23,11 +23,13 @@ export function PriceDisplay({
       <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted">
         {t(deal)}
       </div>
+      {/* Full (non-truncated) number — buyers want to see the exact figure on
+          the detail page, not the "$1.65M" approximation used in cards/lists. */}
       <div className="mt-1 font-serif text-4xl font-normal leading-none tracking-[-0.01em] text-teak-deep sm:text-5xl">
-        {format(priceThb)}
+        {formatFull(priceThb)}
       </div>
       <div className="mt-2 text-xs text-muted">
-        {format(pricePerSqm)} / m²
+        {formatFull(pricePerSqm)} / m²
       </div>
       {currency === 'USDT' ? (
         <div className="mt-2 text-[11px] font-medium uppercase tracking-[0.12em] text-gold-deep">USDT ERC-20</div>

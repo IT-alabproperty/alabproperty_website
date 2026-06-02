@@ -76,4 +76,26 @@ function trimTrailingZeros(s: string): string {
   return s.replace(/\.?0+$/, '');
 }
 
+/**
+ * Full (non-truncated) price format with locale-appropriate thousands
+ * separators. Use this on the property detail page where the buyer wants to
+ * see the exact number, not a "$1.65M" approximation.
+ * Examples (target=USD, locale=en):
+ *   24_500_000 THB → "$698,250"
+ *   58_000_000 THB → "$1,653,000"
+ * Examples (target=RUB, locale=ru):
+ *   24_500_000 THB → "₽60 025 000"
+ */
+export function formatPriceFull(
+  thbAmount: number,
+  target: Currency,
+  locale: 'ru' | 'en' = 'ru',
+  rates: Record<Currency, number> = FALLBACK_RATES,
+): string {
+  const value = convertFromThb(thbAmount, target, rates);
+  const symbol = CURRENCY_SYMBOLS[target];
+  const intl = locale === 'ru' ? 'ru-RU' : 'en-US';
+  return symbol + Math.round(value).toLocaleString(intl);
+}
+
 export const currencyOrder: Currency[] = ['THB', 'USD', 'EUR', 'RUB', 'USDT'];
