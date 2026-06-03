@@ -115,10 +115,15 @@ export default async function LocaleLayout({
     image: `${SITE_URL}/opengraph-image`,
     description: tSeo('defaultDescription'),
     priceRange: '$$$$',
-    areaServed: [
-      { '@type': 'City', name: 'Bangkok', containedInPlace: { '@type': 'Country', name: 'Thailand' } },
-      { '@type': 'City', name: 'Pattaya', containedInPlace: { '@type': 'Country', name: 'Thailand' } },
-    ],
+    // Pulled from the cities taxonomy in the DB so when an admin adds a new
+    // city, Google immediately learns we serve it on next ISR/redeploy.
+    // English names — Google's geo-resolver works in EN; localized strings
+    // come from elsewhere (page content, og:locale).
+    areaServed: cities.map((city) => ({
+      '@type': 'City',
+      name: city.name?.en || city.name?.ru || city.slug,
+      containedInPlace: { '@type': 'Country', name: 'Thailand' },
+    })),
     knowsLanguage: ['ru', 'en', 'th'],
     contactPoint: [
       {
