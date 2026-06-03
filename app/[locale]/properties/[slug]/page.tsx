@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { Link } from '@/lib/i18n/routing';
-import Script from 'next/script';
 import { notFound } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { getLocale, getTranslations } from 'next-intl/server';
@@ -181,13 +180,15 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
 
   return (
     <>
-      <Script
-        id={`ld-listing-${property.slug}`}
+      {/* Plain <script> — next/script packs inline JSON into the RSC payload
+          instead of rendering an actual <script> tag in HTML, so Googlebot's
+          Rich Results Test reports "no items detected". A vanilla script tag
+          in a server component renders directly into the initial HTML. */}
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(listingLd) }}
       />
-      <Script
-        id={`ld-crumbs-${property.slug}`}
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
       />

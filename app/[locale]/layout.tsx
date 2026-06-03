@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Script from 'next/script';
 import { Cormorant_Garamond, Inter_Tight } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations } from 'next-intl/server';
@@ -149,10 +148,12 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} className={`${cormorant.variable} ${interTight.variable}`}>
       <body>
-        <Script
-          id="ld-organization"
+        {/* Plain <script> — next/script (even with strategy="beforeInteractive"
+            in the App Router) doesn't reliably emit an actual <script> tag in
+            the initial HTML, which is what Googlebot's Rich Results Test reads.
+            A vanilla tag in a server component renders directly into HTML. */}
+        <script
           type="application/ld+json"
-          strategy="beforeInteractive"
           // Stringify once on the server; no user data is interpolated here.
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationLd) }}
         />

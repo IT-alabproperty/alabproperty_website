@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { Link } from '@/lib/i18n/routing';
-import Script from 'next/script';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
@@ -152,13 +151,14 @@ export default async function BlogPostPage({
 
   return (
     <main className="min-h-screen bg-paper px-6 pb-32 pt-32 sm:px-10 sm:pt-40 lg:px-14">
-      <Script
-        id={`ld-blogposting-${post.slug}`}
+      {/* Plain <script> — next/script packs inline JSON into the RSC payload
+          instead of an actual tag in HTML, so Rich Results Test misses it.
+          A vanilla script tag in a server component renders into the HTML. */}
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(blogPostingLd) }}
       />
-      <Script
-        id={`ld-crumbs-${post.slug}`}
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
       />

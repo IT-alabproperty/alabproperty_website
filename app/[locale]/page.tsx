@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Script from 'next/script';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { HeroSlideshow } from '@/components/hero-slideshow';
 import { SearchSection } from '@/components/sections/search-section';
@@ -117,13 +116,16 @@ export default async function HomePage() {
 
   return (
     <main>
-      <Script
-        id="ld-website"
+      {/* Plain <script> — next/script with default strategy packs inline JSON
+          into the RSC payload instead of rendering an actual tag in HTML, so
+          Googlebot's Rich Results Test reports "no items detected". A vanilla
+          <script type="application/ld+json"> in a server component renders
+          directly into the initial HTML, which is what crawlers need. */}
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteLd) }}
       />
-      <Script
-        id="ld-faq"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
       />
