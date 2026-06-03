@@ -197,6 +197,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
         related={related}
         districts={districts}
         types={types}
+        cities={cities}
         amenities={amenities}
         tags={tags}
       />
@@ -205,12 +206,13 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
 }
 
 function PropertyContent({
-  property, related, districts, types, amenities, tags,
+  property, related, districts, types, cities, amenities, tags,
 }: {
   property: Property;
   related: Property[];
   districts: TaxRow[];
   types: TaxRow[];
+  cities: TaxRow[];
   amenities: TaxRow[];
   tags: TaxRow[];
 }) {
@@ -225,6 +227,13 @@ function PropertyContent({
 
   const districtLabel = resolveLabel(districts, property.district, locale);
   const typeLabel = resolveLabel(types, property.type, locale);
+  // City label for the location line under the property title. Falls back to
+  // RU name if the current locale's label isn't filled in, and to undefined
+  // (rather than the raw slug) if the city is missing entirely — that way
+  // the JSX below can collapse the row gracefully.
+  const cityRow = property.city ? cities.find((c) => c.slug === property.city) : null;
+  const localityName: string | undefined =
+    cityRow?.name?.[locale] ?? cityRow?.name?.ru ?? undefined;
 
   // DB-first label resolution: row.name → i18n fallback → prettified slug.
   // Lets admin-created custom amenities/tags render correctly while keeping
@@ -299,7 +308,20 @@ function PropertyContent({
             <h1 className="font-serif text-[clamp(36px,5vw,64px)] font-normal leading-[1.05] tracking-[-0.02em] text-teak-deep">
               {property.name[locale]}
             </h1>
-            <p className="mt-3 text-base text-muted sm:text-lg">{property.address[locale]}</p>
+            {/*
+              Location line: "City · Address". Both parts are optional —
+              older properties may have address but no city set, or city
+              taxonomy may not have been added yet. Show whichever pieces
+              exist, falling back gracefully so the line never appears as
+              just a stray "·".
+            */}
+            {(localityName || property.address[locale]) && (
+              <p className="mt-3 text-base text-muted sm:text-lg">
+                {[localityName, property.address[locale]]
+                  .filter((part) => part && String(part).trim())
+                  .join(' · ')}
+              </p>
+            )}
             {property.code && (
               <p className="mt-2 font-mono text-[11px] tracking-[0.25em] text-muted/55">
                 {property.code}
