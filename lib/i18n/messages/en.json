@@ -368,38 +368,38 @@
 
   "SEO": {
     "siteName": "ALAB Property",
-    "defaultTitle": "ALAB Property · Real Estate & Legal Counsel in Thailand",
-    "defaultDescription": "Premium real estate in Thailand with full in-house legal support. Condos, villas and penthouses in Bangkok and Pattaya. Bilingual transactions in English and Russian.",
+    "defaultTitle": "Buy Property in Thailand as a Foreigner · ALAB Property",
+    "defaultDescription": "Condos, villas and penthouses for sale in Bangkok, Pattaya and Phuket. Full in-house legal support for foreign buyers: title verification, freehold/leasehold, Land Department transfer. English & Russian.",
     "titleTemplate": "%s · ALAB Property",
-    "ogAlt": "ALAB Property — Real Estate & Legal Counsel in Thailand",
+    "ogAlt": "ALAB Property — Buy Property in Thailand with Legal Counsel",
     "pages": {
       "home": {
-        "title": "Real Estate & Legal Counsel in Thailand",
-        "description": "Premium real estate in Thailand with full in-house legal support. Curated condos, villas and penthouses in Bangkok and Pattaya — every transaction reviewed by our lawyers."
+        "title": "Buy a Condo or Villa in Thailand — with Legal Counsel",
+        "description": "Condos, villas and penthouses in Bangkok, Pattaya and Phuket. Every transaction backed by licensed Thai property lawyers from A.L.A.B Consultant — 15+ years of practice. Safe ownership for foreign buyers."
       },
       "properties": {
-        "title": "Property Catalog in Thailand",
-        "description": "A curated selection of premium condominiums, villas, penthouses and townhouses in Bangkok and Pattaya. Verified titles, vetted developers, in-house legal review."
+        "title": "Property Catalog in Thailand — Condos & Villas for Sale",
+        "description": "A curated selection of condominiums, villas, penthouses and townhouses in Bangkok, Pattaya and Phuket for foreign buyers. Verified titles, vetted developers, in-house legal review of every listing."
       },
       "blog": {
-        "title": "Market Insights",
-        "description": "Notes on the Thai property market, legal practice and investment from ALAB Property — for buyers, owners and investors."
+        "title": "Thailand Property Market Insights",
+        "description": "Notes on the Thai property market, foreign-buyer law and investment strategies from ALAB Property — for buyers, owners and investors."
       },
       "business": {
-        "title": "Business & Investments in Thailand",
-        "description": "ALAB supports international business in Thailand — from company registration to asset structuring and investment protection."
+        "title": "Company Registration in Thailand for Foreigners",
+        "description": "Company registration in Thailand for foreigners, Non-B business visa, BOI-promoted structures, bank account opening and bookkeeping. Handled by A.L.A.B Consultant — 15+ years in Thai law."
       },
       "legal": {
-        "title": "Legal Services for Real Estate in Thailand",
-        "description": "Due diligence, ownership structuring, contracts and Land Department registration. Crypto-ready transactions handled by ALAB lawyers."
+        "title": "Property Lawyer in Thailand for Foreign Buyers",
+        "description": "English-speaking property lawyer in Thailand. Title due diligence, freehold for foreigners, leasehold structuring, Land Department transfer. Settle in THB, USD or USDT (ERC-20). 15+ years of practice."
       },
       "company": {
-        "title": "About ALAB Property",
-        "description": "ALAB Property is a Bangkok-based real estate agency and legal practice. Bilingual team, end-to-end transaction support."
+        "title": "About ALAB Property — Bangkok Real Estate & Law",
+        "description": "ALAB Property is a Bangkok-based real estate agency and legal practice serving foreign buyers. Bilingual team, end-to-end transaction support from enquiry to handover."
       },
       "contacts": {
-        "title": "Contact ALAB Property",
-        "description": "Get in touch with ALAB Property — Bangkok-based real estate and legal counsel. We respond in English and Russian within 12 hours."
+        "title": "Contact ALAB Property — Bangkok, Thailand",
+        "description": "Get in touch with ALAB Property — real estate and legal counsel in Bangkok, Pattaya and Phuket. We respond in English and Russian within 12 hours."
       },
       "privacy": {
         "title": "Privacy Policy",
