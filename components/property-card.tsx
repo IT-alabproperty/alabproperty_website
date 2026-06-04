@@ -28,7 +28,7 @@ export function PropertyCard({
   const tStatus = useTranslations('Status');
   const tTags = useTranslations('Tags');
   const { format } = useCurrency();
-  const { districtLabel: lookupDistrict } = useTaxonomyLabels();
+  const { districtLabel: lookupDistrict, cityLabel: lookupCity } = useTaxonomyLabels();
 
   const images = [property.coverImage, ...property.gallery.filter((g) => g !== property.coverImage)];
   const [activeImg, setActiveImg] = useState(0);
@@ -128,6 +128,27 @@ export function PropertyCard({
   const isAvailable = property.status === 'available';
   const investorPick = property.tags.includes('investor-pick');
   const districtLabel = lookupDistrict(property.district) || (property.district ?? '—');
+  // City label shown alongside district / address on the card. Lets the
+  // user distinguish Bangkok / Pattaya properties at a glance — without
+  // this, a Pattaya listing whose address field is empty just shows the
+  // district name (e.g. "Chonburi") with no country/city context.
+  const cityLabel = lookupCity(property.city);
+  // Compose the locality line shown on grid cards: "City · District" when
+  // both exist, otherwise whichever piece we have. Skips dupes (some legacy
+  // rows store the same string in both — no point repeating).
+  const localityLine = (() => {
+    const parts: string[] = [];
+    if (cityLabel && cityLabel.trim()) parts.push(cityLabel);
+    if (
+      districtLabel &&
+      districtLabel.trim() &&
+      districtLabel !== '—' &&
+      districtLabel.toLowerCase() !== cityLabel.toLowerCase()
+    ) {
+      parts.push(districtLabel);
+    }
+    return parts.join(' · ');
+  })();
 
   const onPointerEnter = () => setHovered(true);
   const onPointerLeave = () => setHovered(false);
@@ -189,7 +210,9 @@ export function PropertyCard({
         <div className="flex flex-col justify-between py-2">
           <div>
             <div className="mb-2 flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-muted">
-              <span>{districtLabel} · {tProperty('areaLabel', { n: property.areaSqm })}</span>
+              <span>
+                {localityLine || districtLabel} · {tProperty('areaLabel', { n: property.areaSqm })}
+              </span>
               {property.code && (
                 <span className="font-mono tracking-[0.2em] text-muted/55">· {property.code}</span>
               )}
@@ -269,13 +292,14 @@ export function PropertyCard({
         <div className="mb-1.5 font-serif text-2xl font-normal text-teak-deep">
           {property.name[locale]}
         </div>
+        {/*
+          Location line under the card title. Prefers a clean "City · District"
+          combo over a raw address — keeps the card scannable and gives buyers
+          the level of detail that's actually useful in a grid view (full
+          street address lives on the detail page).
+        */}
         <div className="mb-4 text-[13px] tracking-tight text-muted">
-          {[districtLabel, property.address[locale]?.trim()]
-            .filter((part): part is string => Boolean(part))
-            .filter((part, i, arr) =>
-              arr.findIndex((p) => p.toLowerCase() === part.toLowerCase()) === i
-            )
-            .join(' · ')}
+          {localityLine}
         </div>
         <div className="flex gap-3.5 border-t border-[var(--line)] pt-4 text-xs text-teak-warm">
           <span>{tProperty('bedroomsLabel', { count: property.bedrooms })}</span>
