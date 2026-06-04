@@ -270,7 +270,12 @@ export function PropertyCard({
           {property.name[locale]}
         </div>
         <div className="mb-4 text-[13px] tracking-tight text-muted">
-          {districtLabel} · {property.address[locale]}
+          {[districtLabel, property.address[locale]?.trim()]
+            .filter((part): part is string => Boolean(part))
+            .filter((part, i, arr) =>
+              arr.findIndex((p) => p.toLowerCase() === part.toLowerCase()) === i
+            )
+            .join(' · ')}
         </div>
         <div className="flex gap-3.5 border-t border-[var(--line)] pt-4 text-xs text-teak-warm">
           <span>{tProperty('bedroomsLabel', { count: property.bedrooms })}</span>
