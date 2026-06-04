@@ -369,33 +369,33 @@
   "SEO": {
     "siteName": "ALAB Property",
     "defaultTitle": "Buy Property in Thailand as a Foreigner · ALAB Property",
-    "defaultDescription": "Condos, villas and penthouses for sale in Bangkok, Pattaya and Phuket. Full in-house legal support for foreign buyers: title verification, freehold/leasehold, Land Department transfer. English & Russian.",
+    "defaultDescription": "Buy a condo, villa, house or penthouse in Thailand from ฿2M (~$57K). Bangkok, Pattaya, Phuket. Full legal support by A.L.A.B Consultant — a licensed Thai law practice with 15+ years of experience. We help foreign buyers in their native language.",
     "titleTemplate": "%s · ALAB Property",
     "ogAlt": "ALAB Property — Buy Property in Thailand with Legal Counsel",
     "pages": {
       "home": {
         "title": "Buy a Condo or Villa in Thailand — with Legal Counsel",
-        "description": "Condos, villas and penthouses in Bangkok, Pattaya and Phuket. Every transaction backed by licensed Thai property lawyers from A.L.A.B Consultant — 15+ years of practice. Safe ownership for foreign buyers."
+        "description": "Condos, villas, houses and penthouses in Bangkok, Pattaya and Phuket from ฿2M. ALAB Property agency since 2021, backed by A.L.A.B Consultant — a licensed Thai law practice (15+ years). Helping foreign buyers in their native language — for living and investment."
       },
       "properties": {
-        "title": "Property Catalog in Thailand — Condos & Villas for Sale",
-        "description": "A curated selection of condominiums, villas, penthouses and townhouses in Bangkok, Pattaya and Phuket for foreign buyers. Verified titles, vetted developers, in-house legal review of every listing."
+        "title": "Property Catalog Thailand 2026 — Condos & Villas for Sale",
+        "description": "A curated selection of condos, villas, houses, penthouses and townhouses in Bangkok (Sukhumvit, Silom, Thonglor, Asok), Pattaya and Phuket for foreign buyers and investors. Verified titles, legal review by A.L.A.B Consultant."
       },
       "blog": {
         "title": "Thailand Property Market Insights",
-        "description": "Notes on the Thai property market, foreign-buyer law and investment strategies from ALAB Property — for buyers, owners and investors."
+        "description": "Notes on the Thai property market in 2026, foreign-buyer law and investment strategies from ALAB Property — for buyers, owners and investors."
       },
       "business": {
-        "title": "Company Registration in Thailand for Foreigners",
-        "description": "Company registration in Thailand for foreigners, Non-B business visa, BOI-promoted structures, bank account opening and bookkeeping. Handled by A.L.A.B Consultant — 15+ years in Thai law."
+        "title": "Business & Investments in Thailand for Foreigners",
+        "description": "Company registration in Thailand for foreigners, Non-B business visa, BOI-promoted structures, bank account opening and bookkeeping. Handled by A.L.A.B Consultant — a licensed law practice with 15+ years in Thai law."
       },
       "legal": {
         "title": "Property Lawyer in Thailand for Foreign Buyers",
-        "description": "English-speaking property lawyer in Thailand. Title due diligence, freehold for foreigners, leasehold structuring, Land Department transfer. Settle in THB, USD or USDT (ERC-20). 15+ years of practice."
+        "description": "English-speaking property lawyer in Thailand. Title due diligence, freehold under the 49% foreign quota, leasehold for villas and land, Land Department transfer. Settle in THB, USD or USDT (ERC-20). A.L.A.B Consultant — 15+ years."
       },
       "company": {
         "title": "About ALAB Property — Bangkok Real Estate & Law",
-        "description": "ALAB Property is a Bangkok-based real estate agency and legal practice serving foreign buyers. Bilingual team, end-to-end transaction support from enquiry to handover."
+        "description": "ALAB Property is a Bangkok-based real estate agency operating since 2021, affiliated with A.L.A.B Consultant — a licensed Thai law practice with 15+ years of experience. Bilingual team, end-to-end transaction support."
       },
       "contacts": {
         "title": "Contact ALAB Property — Bangkok, Thailand",
