@@ -39,6 +39,44 @@ function resolveLabel(rows: TaxRow[], slug: string | null | undefined, locale: L
   return prettifySlug(slug);
 }
 
+/**
+ * Shorten a verbose Google-Maps-style Thai address to its useful parts for
+ * the listing header. Strips parts the page already shows (city/country)
+ * or that just add noise (postal codes, "Khwaeng"/"Khet" prefixes, the
+ * "Krung Thep Maha Nakhon" formal Bangkok name, duplicate "Thailand"
+ * tokens that creep in when the editor pastes a fully-qualified address).
+ *
+ * Example in → out:
+ *   "195 Ratchawithi 21 Alley, Khwaeng Bang Yi Khan, Khet Bang Phlat,
+ *    Krung Thep Maha Nakhon 10700, Thailand, Thailand"
+ *   → "195 Ratchawithi 21 Alley, Bang Yi Khan"
+ */
+function shortenAddress(raw: string | undefined | null): string {
+  if (!raw) return '';
+  const seen = new Set<string>();
+  const parts = raw
+    .split(',')
+    .map((p) => p
+      .replace(/\b\d{5}\b/g, '') // postcodes
+      .replace(/\bKhwaeng\s+/gi, '')
+      .replace(/\bKhet\s+/gi, '')
+      .replace(/\bKrung\s+Thep(?:\s+Maha\s+Nakhon)?\b/gi, '')
+      .replace(/\bThailand\b/gi, '')
+      .replace(/\bBangkok\b/gi, '')
+      .trim()
+    )
+    .filter((p) => {
+      if (!p || p.length < 2) return false;
+      // De-duplicate (handles the "Thailand, Thailand" double-paste case).
+      const key = p.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  // Two parts is plenty for the header — street/unit + locality.
+  return parts.slice(0, 2).join(', ');
+}
+
 // Regenerate listing pages on demand (and at least every hour) instead of
 // rebuilding on every request. Means Google sees fresh data without the cold
 // hit on first visit.
@@ -312,17 +350,21 @@ function PropertyContent({
             {/*
               Location line: "City · Address". Both parts are optional —
               older properties may have address but no city set, or city
-              taxonomy may not have been added yet. Show whichever pieces
-              exist, falling back gracefully so the line never appears as
-              just a stray "·".
+              taxonomy may not have been added yet.
+              We shorten the address to its useful parts (street + locality)
+              so the heading stays compact even when the editor pasted a
+              full Google-Maps-style address with country/postcode/etc.
             */}
-            {(localityName || property.address[locale]) && (
-              <p className="mt-3 text-base text-muted sm:text-lg">
-                {[localityName, property.address[locale]]
-                  .filter((part) => part && String(part).trim())
-                  .join(' · ')}
-              </p>
-            )}
+            {(() => {
+              const shortAddr = shortenAddress(property.address?.[locale] || property.address?.ru);
+              const parts = [localityName, shortAddr].filter((p) => p && String(p).trim());
+              if (parts.length === 0) return null;
+              return (
+                <p className="mt-3 text-base leading-snug text-muted sm:text-lg">
+                  {parts.join(' · ')}
+                </p>
+              );
+            })()}
             {property.code && (
               <p className="mt-2 font-mono text-[11px] tracking-[0.25em] text-muted/55">
                 {property.code}
@@ -423,25 +465,49 @@ function PropertyContent({
         </div>
       </section>
 
-      {/* Map */}
-      {property.coordinates && (
-        <section className="mx-auto mt-24 max-w-[1280px] px-6 sm:mt-32 sm:px-10 lg:px-14">
-          <Eyebrow className="mb-6">{t('mapEyebrow')}</Eyebrow>
-          <h2 className="mb-8 font-serif text-3xl font-normal text-teak-deep sm:text-4xl">
-            {t('mapTitle')}
-          </h2>
-          <div className="overflow-hidden rounded-xl border border-[var(--line)] shadow-[0_8px_32px_rgba(43,24,16,0.08)]" style={{ height: '420px' }}>
-            <PropertyMapClient
-              lat={property.coordinates.lat}
-              lng={property.coordinates.lng}
-              label={property.name[locale]}
-            />
-          </div>
-          <p className="mt-4 text-xs uppercase tracking-[0.18em] text-muted">
-            {property.address[locale]}
-          </p>
-        </section>
-      )}
+      {/*
+        Map. We prefer feeding the embed an address string over raw lat/lng
+        because Google's server-side geocode is street-accurate, whereas
+        any coords we stored (legacy data from when we used Nominatim) may
+        only be at district-centroid resolution.
+
+        We pass the ORIGINAL full address to the geocoder (not the shortened
+        one used in the heading) — Google can use the extra disambiguation
+        even though it's noise for human readers. We just guard against the
+        common "Thailand, Thailand, Thailand" duplication.
+      */}
+      {(() => {
+        const rawAddress = property.address?.[locale] || property.address?.ru;
+        const hasMappable = !!(rawAddress || property.coordinates);
+        if (!hasMappable) return null;
+        // Strip duplicated trailing "Thailand"s before sending to Google.
+        // We append our own ", Thailand" so the country is always exactly once.
+        const cleanedAddress = (rawAddress || '')
+          .replace(/(?:,\s*Thailand)+\s*$/gi, '')
+          .trim();
+        const query = [cleanedAddress, localityName, 'Thailand']
+          .filter((p) => p && String(p).trim())
+          .join(', ');
+        return (
+          <section className="mx-auto mt-24 max-w-[1280px] px-6 sm:mt-32 sm:px-10 lg:px-14">
+            <Eyebrow className="mb-6">{t('mapEyebrow')}</Eyebrow>
+            <h2 className="mb-8 font-serif text-3xl font-normal text-teak-deep sm:text-4xl">
+              {t('mapTitle')}
+            </h2>
+            <div className="overflow-hidden rounded-xl border border-[var(--line)] shadow-[0_8px_32px_rgba(43,24,16,0.08)]" style={{ height: '420px' }}>
+              <PropertyMapClient
+                query={query}
+                lat={property.coordinates?.lat}
+                lng={property.coordinates?.lng}
+                label={property.name[locale]}
+              />
+            </div>
+            <p className="mt-4 text-xs uppercase tracking-[0.18em] text-muted">
+              {shortenAddress(rawAddress) || rawAddress}
+            </p>
+          </section>
+        );
+      })()}
 
       {/* ROI calculator */}
       <section className="mx-auto mt-24 max-w-[1280px] px-6 sm:mt-32 sm:px-10 lg:px-14">
