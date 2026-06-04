@@ -372,12 +372,22 @@ function PropertyContent({
             )}
           </div>
 
-          <div className="flex flex-col items-start gap-4 sm:items-end">
+          {/*
+            Price + CTA column.
+            - Mobile: stretches to full width with left-aligned content and
+              a full-width CTA button. Without `w-full` the column collapses
+              to the intrinsic width of the price text and the CTA looks
+              like a stranded chip on the left.
+            - Desktop (sm+): right-aligned chip beside the title, button
+              shrinks back to intrinsic width.
+          */}
+          <div className="flex w-full flex-col items-stretch gap-4 sm:w-auto sm:items-end">
             <PriceDisplay priceThb={property.priceThb} deal={property.deal} areaSqm={property.areaSqm} />
             <ProposalButton
               property={{ id: property.id, slug: property.slug, name: property.name }}
               label={locale === 'ru' ? 'Получить предложение' : 'Get a Proposal'}
               variant="gold"
+              className="w-full justify-center sm:w-auto sm:justify-start"
             />
           </div>
         </div>
