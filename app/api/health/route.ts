@@ -153,14 +153,42 @@ async function checkResend(): Promise<CheckResult> {
   const t0 = Date.now()
   const key = process.env.RESEND_API_KEY?.trim()
   if (!key) return { skipped: true, reason: 'RESEND_API_KEY not set' }
-  // GET /domains is the lightest authenticated Resend endpoint. Returns
-  // 200 with the list (possibly empty), 401 if key is bad, 5xx if Resend
-  // itself is having a bad day. No emails are sent.
-  const res = await fetch('https://api.resend.com/domains', {
-    headers: { Authorization: `Bearer ${key}` },
+
+  // Probe approach: POST /emails with intentionally invalid body.
+  //
+  // Why not GET /domains: that endpoint requires "Full Access" permission.
+  // Production keys at ALAB use the safer "Sending Access" permission
+  // (least privilege — if the key leaks, attacker can only spam from our
+  // domain, not enumerate/delete domains or other keys). Sending Access
+  // keys get 401 with `restricted_api_key` on /domains — looks like a
+  // dead key but is actually working fine.
+  //
+  // POST /emails is reachable by both permission tiers. Resend's auth
+  // layer runs before body validation, so we get cleanly separable
+  // signals:
+  //   - 401 → key truly rejected (revoked / wrong / expired)
+  //   - 422 → key accepted, body failed validation (= service healthy)
+  //   - 400 → same as 422 in some Resend versions
+  //   - 5xx → Resend infrastructure problem
+  //
+  // The empty body is deliberately not a valid email — no message is ever
+  // queued or charged.
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({}),
     signal: AbortSignal.timeout(CHECK_TIMEOUT_MS - 200),
   })
-  if (!res.ok) {
+
+  // Auth failures = real failures. 4xx body-validation errors are the
+  // expected "healthy" response for this probe.
+  if (res.status === 401 || res.status === 403) {
+    return { ok: false, ms: Date.now() - t0, error: `resend HTTP ${res.status}` }
+  }
+  if (res.status >= 500) {
     return { ok: false, ms: Date.now() - t0, error: `resend HTTP ${res.status}` }
   }
   return { ok: true, ms: Date.now() - t0 }
