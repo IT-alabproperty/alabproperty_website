@@ -229,6 +229,25 @@ export async function GET(
     ? `https://mail.google.com/mail/u/0/#drafts/${encodeURIComponent(threadId)}`
     : null
 
+  // ──── Happy path: we have a real HTML draft, server-redirect straight ────
+  //
+  // Telegram's in-app browser sometimes drops client-side JS redirects to
+  // mail.google.com (silent block, no error). A server-side 302 cannot
+  // be dropped — Telegram's WebView is obligated to follow it. So the
+  // editor lands directly on their HTML draft instead of seeing our
+  // interstitial first and then having to wait for a JS handoff.
+  //
+  // The interstitial below is now ONLY rendered as an error/fallback page
+  // when the Apps Script draft creation failed AND we couldn't recover a
+  // cached threadId. There the editor sees diagnostic info + the plain-
+  // text quick-reply button.
+  if (htmlDraftUrl) {
+    return NextResponse.redirect(htmlDraftUrl, {
+      status: 302,
+      headers: { 'Cache-Control': 'no-store, max-age=0' },
+    })
+  }
+
   // Cap body length for the plain-text fallback. Gmail's compose URL accepts
   // ~2KB total — bigger and the browser silently truncates or rejects.
   const MAX_BODY = 1500
