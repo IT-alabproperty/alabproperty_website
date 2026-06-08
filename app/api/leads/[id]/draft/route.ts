@@ -68,7 +68,6 @@ async function createGmailDraftViaAppsScript(args: {
   if (!webhookUrl) return { error: 'webhook url not configured' }
 
   const controller = new AbortController()
-  // 20s budget — Apps Script cold-starts can take 5-10s, allow room.
   const timer = setTimeout(() => controller.abort(), 20_000)
   try {
     const res = await fetch(webhookUrl, {
@@ -85,13 +84,25 @@ async function createGmailDraftViaAppsScript(args: {
       signal: controller.signal,
       redirect: 'follow',
     })
-    const data = (await res.json().catch(() => ({}))) as {
-      ok?: boolean
-      threadId?: string
-      error?: string
-    }
+    // Read response body as text first so we can log it even when it isn't
+    // JSON (e.g. Apps Script returning an HTML 404 page because the
+    // deployment was archived). Without this, parse errors silently drop
+    // the diagnostic and we're left guessing at "apps script HTTP" with
+    // no status, no body, no signal.
+    const bodyText = await res.text().catch(() => '')
+    let data: { ok?: boolean; threadId?: string; error?: string } = {}
+    try { data = JSON.parse(bodyText) } catch { /* not JSON */ }
+
     if (!res.ok || !data.ok || !data.threadId) {
-      return { error: data.error || `apps script HTTP ${res.status}` }
+      // Surface the FULL diagnostic: status code, body shape, first chars
+      // of raw response. Length-capped so we don't blow up logs with
+      // entire HTML 404 pages.
+      const snippet = bodyText.slice(0, 200).replace(/\s+/g, ' ')
+      return {
+        error: `HTTP ${res.status} ` +
+          (data.error ? `script-error="${data.error}" ` : '') +
+          `body="${snippet}"`,
+      }
     }
     return { threadId: data.threadId }
   } catch (e) {
@@ -322,6 +333,18 @@ export async function GET(
     line-height: 1.5;
     text-align: left;
   }
+  .draft-error-detail {
+    display: block;
+    margin-top: 8px;
+    padding: 6px 8px;
+    background: rgba(0,0,0,0.25);
+    border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    line-height: 1.4;
+    color: rgba(255, 220, 180, 0.95);
+    word-break: break-word;
+  }
 </style>
 </head>
 <body>
@@ -335,7 +358,10 @@ export async function GET(
     htmlDraftUrl
       ? `<a href="${htmlDraftUrl}" class="btn btn-primary">${escapeHtml(t.primary)}</a>`
       : `<div class="btn btn-disabled">${escapeHtml(t.primary)}</div>
-         <div class="draft-error">${t.draftErrorNote}</div>`
+         <div class="draft-error">
+           ${t.draftErrorNote}
+           ${draftError ? `<code class="draft-error-detail">${escapeHtml(draftError)}</code>` : ''}
+         </div>`
   }
   <a href="${appComposeUrl}" class="btn btn-secondary">${escapeHtml(t.secondary)}</a>
   <p class="note">${htmlDraftUrl ? t.autoNote : t.fallbackNote}</p>
