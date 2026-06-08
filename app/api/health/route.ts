@@ -4,70 +4,62 @@ import { supabase } from '@/lib/supabase'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-// Per-check timeout. If Supabase doesn't answer in this window we treat it
-// as "degraded" and return 503 immediately rather than hanging until the
-// external uptime monitor's fetch timeout fires. Without this guard a single
-// slow Supabase query (cold pool, regional blip) would surface as a generic
-// "fetch aborted at 25s" alert with no diagnostic — exactly what happened on
-// 2026-06-01 18:23 UTC. 5s is comfortably above p99 of a healthy round-trip
-// (~300ms in this project) but well under the worker's 25s timeout, so a
-// genuinely-degraded DB still produces a structured 503 the monitor can show.
-const SUPABASE_CHECK_TIMEOUT_MS = 5_000
+/**
+ * Per-check timeout. Each subsystem is given this much time to respond
+ * before we declare it degraded. 5s is comfortably above p99 of a healthy
+ * round-trip (~300ms for any of these) but well under the worker's 25s
+ * top-level timeout, so a genuinely-degraded service still produces a
+ * structured 503 the monitor can show — instead of a generic "fetch
+ * aborted" with no diagnostic.
+ */
+const CHECK_TIMEOUT_MS = 5_000
 
 /**
- * Health check endpoint.
+ * Structured result for one subsystem. `skipped` covers the dev/staging
+ * case where an env var isn't set — we don't want a missing RESEND_API_KEY
+ * to surface as "email is down" on someone's laptop. Skipped checks DON'T
+ * fail the overall health.
+ */
+type CheckResult =
+  | { ok: true; ms: number }
+  | { ok: false; ms: number; error: string }
+  | { skipped: true; reason: string }
+
+/**
+ * Aggregate health check endpoint. Used by the external Cloudflare Worker
+ * monitor (see /monitoring/worker.js) and any other uptime probe.
  *
- * Used by external uptime monitors (UptimeRobot etc.) to detect outages.
- * Returns 200 only when the site can actually serve real users — i.e. it
- * can reach Supabase. If DB is down we return 503 so the monitor pages
- * the team, instead of falsely reporting "site is up" because Next itself
- * responded.
+ * Runs all subsystem checks **in parallel** so the total response time is
+ * bounded by the slowest single check, not the sum. Each check has its
+ * own internal timeout so a hung dependency can't drag the whole endpoint
+ * past the worker's deadline.
  *
- * Kept lightweight (one indexed SELECT) so hitting it every 1-5 minutes
- * doesn't add measurable load.
+ * Returns 200 if every non-skipped check passes; 503 if any failed.
  */
 export async function GET() {
   const startedAt = Date.now()
-  const checks: Record<string, { ok: boolean; ms: number; error?: string }> = {}
 
-  // Supabase reachability — issue a trivial query against a small public table,
-  // raced against an internal timeout so we never hang the response.
-  const t0 = Date.now()
-  try {
-    const query = supabase
-      .from('taxonomy_cities')
-      .select('slug', { count: 'exact', head: true })
-      .limit(1)
-      .then(({ error }) => ({ kind: 'result' as const, error }))
+  const [supabaseResult, storageResult, resendResult, telegramResult, upstashResult] =
+    await Promise.all([
+      runCheck(checkSupabase),
+      runCheck(checkSupabaseStorage),
+      runCheck(checkResend),
+      runCheck(checkTelegram),
+      runCheck(checkUpstash),
+    ])
 
-    const timeout = new Promise<{ kind: 'timeout' }>((resolve) =>
-      setTimeout(() => resolve({ kind: 'timeout' }), SUPABASE_CHECK_TIMEOUT_MS),
-    )
-
-    const outcome = await Promise.race([query, timeout])
-
-    if (outcome.kind === 'timeout') {
-      checks.supabase = {
-        ok: false,
-        ms: Date.now() - t0,
-        error: `timeout after ${SUPABASE_CHECK_TIMEOUT_MS}ms`,
-      }
-    } else {
-      checks.supabase = {
-        ok: !outcome.error,
-        ms: Date.now() - t0,
-        error: outcome.error?.message,
-      }
-    }
-  } catch (e) {
-    checks.supabase = {
-      ok: false,
-      ms: Date.now() - t0,
-      error: e instanceof Error ? e.message : 'unknown',
-    }
+  const checks: Record<string, CheckResult> = {
+    supabase: supabaseResult,
+    storage: storageResult,
+    resend: resendResult,
+    telegram: telegramResult,
+    upstash: upstashResult,
   }
 
-  const allOk = Object.values(checks).every((c) => c.ok)
+  // A check counts as "passing" if it's ok OR was skipped (missing env).
+  // Skipping = informational, not a failure — otherwise dev environments
+  // without every credential set would always look degraded.
+  const allOk = Object.values(checks).every((c) => 'skipped' in c || c.ok)
 
   return NextResponse.json(
     {
@@ -84,4 +76,136 @@ export async function GET() {
       },
     },
   )
+}
+
+/**
+ * Wrap a single check with timing, exception trapping, and a hard timeout.
+ * The check function can throw, hang, return — all three end up as a
+ * uniform CheckResult so the caller doesn't have to special-case anything.
+ */
+async function runCheck(fn: () => Promise<CheckResult>): Promise<CheckResult> {
+  const t0 = Date.now()
+  try {
+    const timeoutPromise = new Promise<CheckResult>((resolve) =>
+      setTimeout(
+        () =>
+          resolve({
+            ok: false,
+            ms: Date.now() - t0,
+            error: `timeout after ${CHECK_TIMEOUT_MS}ms`,
+          }),
+        CHECK_TIMEOUT_MS,
+      ),
+    )
+    return await Promise.race([fn(), timeoutPromise])
+  } catch (e) {
+    return {
+      ok: false,
+      ms: Date.now() - t0,
+      error: e instanceof Error ? e.message : 'unknown',
+    }
+  }
+}
+
+// ===== Individual checks =====
+//
+// Each check is a tiny, side-effect-free probe of one external dependency.
+// Rules:
+//   - Must return a CheckResult, never throw past `runCheck()`
+//   - Must complete (or fail) within ~1s in the happy path
+//   - Must NOT mutate anything (no test emails, no test messages)
+//   - Must return `skipped` if its env vars aren't set
+
+async function checkSupabase(): Promise<CheckResult> {
+  const t0 = Date.now()
+  // Trivial query against a small public table. Tests three things at
+  // once: TCP reachability, auth (anon key), and the SQL engine itself.
+  const { error } = await supabase
+    .from('taxonomy_cities')
+    .select('slug', { count: 'exact', head: true })
+    .limit(1)
+  if (error) return { ok: false, ms: Date.now() - t0, error: error.message }
+  return { ok: true, ms: Date.now() - t0 }
+}
+
+async function checkSupabaseStorage(): Promise<CheckResult> {
+  const t0 = Date.now()
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!url || !anon) {
+    return { skipped: true, reason: 'NEXT_PUBLIC_SUPABASE_URL / ANON_KEY not set' }
+  }
+  // Cheapest possible probe of Storage: list buckets. Doesn't read any
+  // file content; returns immediately with the bucket array (or auth error).
+  // We hit the REST API directly so this check is independent of the
+  // supabase-js client and its caching layers.
+  const res = await fetch(`${url}/storage/v1/bucket`, {
+    headers: { apikey: anon, Authorization: `Bearer ${anon}` },
+    signal: AbortSignal.timeout(CHECK_TIMEOUT_MS - 200),
+  })
+  if (!res.ok) {
+    return { ok: false, ms: Date.now() - t0, error: `storage HTTP ${res.status}` }
+  }
+  return { ok: true, ms: Date.now() - t0 }
+}
+
+async function checkResend(): Promise<CheckResult> {
+  const t0 = Date.now()
+  const key = process.env.RESEND_API_KEY?.trim()
+  if (!key) return { skipped: true, reason: 'RESEND_API_KEY not set' }
+  // GET /domains is the lightest authenticated Resend endpoint. Returns
+  // 200 with the list (possibly empty), 401 if key is bad, 5xx if Resend
+  // itself is having a bad day. No emails are sent.
+  const res = await fetch('https://api.resend.com/domains', {
+    headers: { Authorization: `Bearer ${key}` },
+    signal: AbortSignal.timeout(CHECK_TIMEOUT_MS - 200),
+  })
+  if (!res.ok) {
+    return { ok: false, ms: Date.now() - t0, error: `resend HTTP ${res.status}` }
+  }
+  return { ok: true, ms: Date.now() - t0 }
+}
+
+async function checkTelegram(): Promise<CheckResult> {
+  const t0 = Date.now()
+  const token = process.env.TELEGRAM_BOT_TOKEN?.trim()
+  if (!token) return { skipped: true, reason: 'TELEGRAM_BOT_TOKEN not set' }
+  // getMe = side-effect-free probe of the Bot API + our token. Returns
+  // { ok: true, result: { id, username, ... } } if both are healthy.
+  // Telegram returns 200 with `{ ok: false, description }` on auth errors
+  // — so check both HTTP status AND the JSON ok flag.
+  const res = await fetch(`https://api.telegram.org/bot${token}/getMe`, {
+    signal: AbortSignal.timeout(CHECK_TIMEOUT_MS - 200),
+  })
+  if (!res.ok) {
+    return { ok: false, ms: Date.now() - t0, error: `telegram HTTP ${res.status}` }
+  }
+  const json = (await res.json().catch(() => null)) as { ok?: boolean; description?: string } | null
+  if (!json?.ok) {
+    return {
+      ok: false,
+      ms: Date.now() - t0,
+      error: json?.description ?? 'telegram API returned ok:false',
+    }
+  }
+  return { ok: true, ms: Date.now() - t0 }
+}
+
+async function checkUpstash(): Promise<CheckResult> {
+  const t0 = Date.now()
+  const url = process.env.KV_REST_API_URL
+  const token = process.env.KV_REST_API_TOKEN
+  if (!url || !token) {
+    return { skipped: true, reason: 'KV_REST_API_URL / KV_REST_API_TOKEN not set' }
+  }
+  // PING is Upstash's recommended health probe — single command, no key
+  // namespace pollution, returns "PONG". REST API form: GET /ping.
+  const res = await fetch(`${url}/ping`, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(CHECK_TIMEOUT_MS - 200),
+  })
+  if (!res.ok) {
+    return { ok: false, ms: Date.now() - t0, error: `upstash HTTP ${res.status}` }
+  }
+  return { ok: true, ms: Date.now() - t0 }
 }

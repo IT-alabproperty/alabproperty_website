@@ -153,8 +153,55 @@ function summariseFailure(input) {
         return 'DB queries failing — most pages that load content will 503 or show empty state.';
       },
     },
-    // Future: add { storage, email, redis, ... } entries here as more checks
-    // get added to /api/health.
+    storage: {
+      component: 'Image storage (Supabase Storage)',
+      impactByError: (err) => {
+        if (/401|403/.test(err || '')) {
+          return 'Storage credentials rejected — uploads from admin will fail, but cached property photos still load.';
+        }
+        if (/timeout/i.test(err || '')) {
+          return 'Storage unreachable — new property photo URLs will return broken images; cached ones still load.';
+        }
+        return 'Image hosting layer impaired — galleries may fall back to placeholders.';
+      },
+    },
+    resend: {
+      component: 'Email gateway (Resend)',
+      impactByError: (err) => {
+        if (/401|403/.test(err || '')) {
+          return 'RESEND_API_KEY rejected — confirmation emails to leads will not send. Lead capture still works.';
+        }
+        if (/timeout/i.test(err || '')) {
+          return 'Resend slow/unreachable — confirmation emails delayed; lead capture itself unaffected.';
+        }
+        return 'Email delivery degraded — customers submitting leads will not get their confirmation letter.';
+      },
+    },
+    telegram: {
+      component: 'Telegram Bot API',
+      impactByError: (err) => {
+        if (/unauthorized|401/i.test(err || '')) {
+          return 'Bot token revoked or rotated incorrectly — admin will NOT get lead notifications.';
+        }
+        if (/timeout/i.test(err || '')) {
+          return 'Telegram API slow — admin lead notifications and tech alerts may be delayed.';
+        }
+        return 'Telegram path degraded — new lead notifications may not reach the admin chat.';
+      },
+    },
+    upstash: {
+      component: 'Rate limiting (Upstash Redis)',
+      impactByError: (err) => {
+        if (/timeout/i.test(err || '')) {
+          return 'Rate limiter unreachable — protection on /api/leads is degraded, but lead form still works.';
+        }
+        return 'Rate limiting backend impaired — possible brief window of weakened anti-spam on the lead form.';
+      },
+    },
+    // Adding a new check?
+    // 1. Wire it into app/api/health/route.ts (new check function + entry in `checks`)
+    // 2. Add an entry here so the alert can name it and describe the impact
+    // No other code changes needed — summariseFailure picks it up automatically.
   };
 
   if (input.kind === 'health-degraded' || input.kind === 'health-503') {
