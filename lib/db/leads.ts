@@ -10,6 +10,14 @@ export interface LeadInsert {
   property_id?: string | null
   property_title?: string | null
   property_slug?: string | null
+  /**
+   * UI locale the visitor was on when they submitted. Drives the language
+   * of the agent's reply draft (created from the Telegram "Reply in Gmail"
+   * button). Without this column-mapped value, the draft route falls back
+   * to RU for everyone — even for English-site visitors. Added 2026-06-08
+   * after the `leads.locale` column migration.
+   */
+  locale?: 'ru' | 'en'
 }
 
 export async function insertLead(
@@ -28,6 +36,7 @@ export async function insertLead(
         property_id: lead.property_id ?? null,
         property_title: lead.property_title ?? null,
         property_slug: lead.property_slug ?? null,
+        locale: lead.locale ?? null,
       })
       .select('id')
       .single()

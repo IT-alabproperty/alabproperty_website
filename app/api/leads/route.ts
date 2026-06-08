@@ -160,6 +160,10 @@ async function handleLeadSubmission(req: NextRequest): Promise<NextResponse> {
     property_id: body.propertyId,
     property_title: body.propertyTitle,
     property_slug: body.propertySlug,
+    // Without this, `lead.locale` reads as null in the draft route and the
+    // agent's reply is always in Russian — even for visitors who submitted
+    // from /en/contacts.
+    locale: body.locale,
   })
 
   if (!result.success) {
