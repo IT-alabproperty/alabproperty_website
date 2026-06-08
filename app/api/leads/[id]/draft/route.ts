@@ -90,21 +90,34 @@ async function createGmailDraftViaAppsScript(args: {
     // the diagnostic and we're left guessing at "apps script HTTP" with
     // no status, no body, no signal.
     const bodyText = await res.text().catch(() => '')
-    let data: { ok?: boolean; threadId?: string; error?: string } = {}
+    let data: { ok?: boolean; threadId?: string; url?: string; error?: string } = {}
     try { data = JSON.parse(bodyText) } catch { /* not JSON */ }
+    const snippet = bodyText.slice(0, 200).replace(/\s+/g, ' ')
 
-    if (!res.ok || !data.ok || !data.threadId) {
-      // Surface the FULL diagnostic: status code, body shape, first chars
-      // of raw response. Length-capped so we don't blow up logs with
-      // entire HTML 404 pages.
-      const snippet = bodyText.slice(0, 200).replace(/\s+/g, ' ')
+    if (!res.ok || !data.ok) {
       return {
         error: `HTTP ${res.status} ` +
           (data.error ? `script-error="${data.error}" ` : '') +
           `body="${snippet}"`,
       }
     }
-    return { threadId: data.threadId }
+
+    // Extract threadId — prefer the explicit field, fall back to parsing it
+    // out of the `url` field. Older versions of the Apps Script handler
+    // only return `{ ok, url }` where url is `https://mail.google.com/.../#drafts/THREAD_ID`,
+    // so this regex covers both shapes without forcing a redeploy on the
+    // script side.
+    let threadId: string | undefined = data.threadId
+    if (!threadId && typeof data.url === 'string') {
+      const match = data.url.match(/#drafts\/([A-Za-z0-9_-]+)/)
+      if (match) threadId = match[1]
+    }
+    if (!threadId) {
+      return {
+        error: `HTTP ${res.status} ok but no threadId/url-parseable: body="${snippet}"`,
+      }
+    }
+    return { threadId }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'fetch failed' }
   } finally {
