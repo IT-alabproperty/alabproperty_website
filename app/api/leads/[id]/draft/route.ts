@@ -44,7 +44,7 @@ export async function GET(
 
   const { data: lead, error } = await supabaseAdmin
     .from('leads')
-    .select('id, name, email, property_title, property_slug')
+    .select('id, name, email, property_title, property_slug, locale')
     .eq('id', id)
     .maybeSingle()
 
@@ -61,20 +61,36 @@ export async function GET(
     )
   }
 
+  // Reply in the same language the customer wrote in. We saved their UI
+  // locale at submit time; default to RU only when the column is null
+  // (older rows from before the locale field was added).
+  const replyLocale: 'ru' | 'en' = lead.locale === 'en' ? 'en' : 'ru'
+
   const tpl = renderAgentReply({
     name: lead.name || (lead.email as string) || 'there',
     propertyTitle: lead.property_title || undefined,
     propertyLink: lead.property_slug
       ? `https://alabproperty.com/properties/${lead.property_slug}`
       : undefined,
-    locale: 'ru',
+    locale: replyLocale,
   })
 
   // Path 1 (preferred): Apps Script webhook — no OAuth/Cloud Console needed.
   // The user's existing Apps Script (same one that handles sheets-row) is
   // extended to handle action='gmail-draft'. Returns a Gmail web URL.
+  //
+  // Tracking diagnostic info here so the final error response can surface
+  // WHY the draft creation failed (env missing? Apps Script returned bad
+  // shape? Network error?) — Vercel's stdout logging panel is hard to find
+  // and stripping the info in production gives us nothing to debug from.
   const webhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL?.trim()
   const webhookSecret = process.env.GOOGLE_SHEETS_WEBHOOK_SECRET?.trim() || ''
+  // Diagnostic breadcrumbs — included in the final 503 body if both paths fail.
+  const diag: Record<string, unknown> = {
+    webhookUrlSet: !!webhookUrl,
+    webhookSecretSet: !!webhookSecret,
+    leadEmailPresent: !!lead.email,
+  }
   if (webhookUrl) {
     try {
       const controller = new AbortController()
@@ -95,6 +111,8 @@ export async function GET(
           redirect: 'follow',
         })
         const json = (await res.json().catch(() => ({}))) as { ok?: boolean; url?: string; error?: string }
+        diag.appsScriptStatus = res.status
+        diag.appsScriptResponse = json
         if (res.ok && json.ok && typeof json.url === 'string' && json.url.startsWith('https://mail.google.com/')) {
           return NextResponse.redirect(json.url, { status: 302 })
         }
@@ -103,6 +121,7 @@ export async function GET(
         clearTimeout(timeout)
       }
     } catch (e) {
+      diag.appsScriptError = e instanceof Error ? e.message : String(e)
       console.error('[api/leads/draft] apps script call failed:', e instanceof Error ? e.message : e)
     }
     // Fall through to OAuth path if Apps Script failed
@@ -116,6 +135,7 @@ export async function GET(
     process.env.GMAIL_REFRESH_TOKEN &&
     gmailFrom
   )
+  diag.gmailOauthConfigured = gmailConfigured
   if (gmailConfigured) {
     try {
       const { createGmailDraft } = await import('@/lib/email/gmail')
@@ -132,12 +152,16 @@ export async function GET(
         : `https://mail.google.com/mail/u/0/#drafts`
       return NextResponse.redirect(redirectTo, { status: 302 })
     } catch (e) {
+      diag.gmailOauthError = e instanceof Error ? e.message : String(e)
       console.error('[api/leads/draft] gmail oauth draft failed:', e)
     }
   }
 
   return NextResponse.json(
-    { error: 'no draft backend configured (Apps Script webhook or Gmail OAuth required)' },
+    {
+      error: 'no draft backend configured (Apps Script webhook or Gmail OAuth required)',
+      diagnostics: diag,
+    },
     { status: 503 },
   )
 }
