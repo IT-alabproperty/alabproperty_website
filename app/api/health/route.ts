@@ -5,14 +5,22 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 /**
- * Per-check timeout. Each subsystem is given this much time to respond
- * before we declare it degraded. 5s is comfortably above p99 of a healthy
- * round-trip (~300ms for any of these) but well under the worker's 25s
- * top-level timeout, so a genuinely-degraded service still produces a
- * structured 503 the monitor can show — instead of a generic "fetch
- * aborted" with no diagnostic.
+ * Per-check timeout budgets. Different subsystems have different healthy
+ * latencies and need different patience — pinning all to one value flags
+ * "slow but ok" services as failures.
+ *
+ *  - DB / Storage / KV: same datacenter, p99 well under 500ms → 5s is plenty.
+ *  - Resend / Telegram: public internet APIs, cold-start fetch + their own
+ *    cold paths can tail-spike to 5-8s without anything being broken. We
+ *    saw repeated Resend false-positives at 5s where the form itself was
+ *    working fine — bumped to 10s so transient slowness doesn't page.
+ *
+ * All values are still well under the worker's 25s top-level timeout,
+ * so a truly down service still produces a structured 503 with diag info
+ * (instead of a generic "fetch aborted" with no detail).
  */
-const CHECK_TIMEOUT_MS = 5_000
+const FAST_CHECK_TIMEOUT_MS = 5_000
+const SLOW_CHECK_TIMEOUT_MS = 10_000
 
 /**
  * Structured result for one subsystem. `skipped` covers the dev/staging
@@ -39,13 +47,16 @@ type CheckResult =
 export async function GET() {
   const startedAt = Date.now()
 
+  // Resend and Telegram get the slow-budget timeout because their public-
+  // internet round-trips occasionally tail-spike past the fast budget
+  // without anything actually being broken. See timeout constants above.
   const [supabaseResult, storageResult, resendResult, telegramResult, upstashResult] =
     await Promise.all([
-      runCheck(checkSupabase),
-      runCheck(checkSupabaseStorage),
-      runCheck(checkResend),
-      runCheck(checkTelegram),
-      runCheck(checkUpstash),
+      runCheck(checkSupabase, FAST_CHECK_TIMEOUT_MS),
+      runCheck(checkSupabaseStorage, FAST_CHECK_TIMEOUT_MS),
+      runCheck(checkResend, SLOW_CHECK_TIMEOUT_MS),
+      runCheck(checkTelegram, SLOW_CHECK_TIMEOUT_MS),
+      runCheck(checkUpstash, FAST_CHECK_TIMEOUT_MS),
     ])
 
   const checks: Record<string, CheckResult> = {
@@ -82,8 +93,14 @@ export async function GET() {
  * Wrap a single check with timing, exception trapping, and a hard timeout.
  * The check function can throw, hang, return — all three end up as a
  * uniform CheckResult so the caller doesn't have to special-case anything.
+ *
+ * `timeoutMs` is per-call so faster subsystems aren't held to slow ones'
+ * standards, and slow ones don't false-alert on transient tail latency.
  */
-async function runCheck(fn: () => Promise<CheckResult>): Promise<CheckResult> {
+async function runCheck(
+  fn: (timeoutMs: number) => Promise<CheckResult>,
+  timeoutMs: number,
+): Promise<CheckResult> {
   const t0 = Date.now()
   try {
     const timeoutPromise = new Promise<CheckResult>((resolve) =>
@@ -92,12 +109,12 @@ async function runCheck(fn: () => Promise<CheckResult>): Promise<CheckResult> {
           resolve({
             ok: false,
             ms: Date.now() - t0,
-            error: `timeout after ${CHECK_TIMEOUT_MS}ms`,
+            error: `timeout after ${timeoutMs}ms`,
           }),
-        CHECK_TIMEOUT_MS,
+        timeoutMs,
       ),
     )
-    return await Promise.race([fn(), timeoutPromise])
+    return await Promise.race([fn(timeoutMs), timeoutPromise])
   } catch (e) {
     return {
       ok: false,
@@ -116,10 +133,13 @@ async function runCheck(fn: () => Promise<CheckResult>): Promise<CheckResult> {
 //   - Must NOT mutate anything (no test emails, no test messages)
 //   - Must return `skipped` if its env vars aren't set
 
-async function checkSupabase(): Promise<CheckResult> {
+async function checkSupabase(_timeoutMs: number): Promise<CheckResult> {
   const t0 = Date.now()
   // Trivial query against a small public table. Tests three things at
   // once: TCP reachability, auth (anon key), and the SQL engine itself.
+  // We don't apply timeout here — the runCheck wrapper races against
+  // its own timeout promise, and supabase-js can't be cleanly aborted
+  // mid-query anyway.
   const { error } = await supabase
     .from('taxonomy_cities')
     .select('slug', { count: 'exact', head: true })
@@ -128,20 +148,16 @@ async function checkSupabase(): Promise<CheckResult> {
   return { ok: true, ms: Date.now() - t0 }
 }
 
-async function checkSupabaseStorage(): Promise<CheckResult> {
+async function checkSupabaseStorage(timeoutMs: number): Promise<CheckResult> {
   const t0 = Date.now()
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   if (!url || !anon) {
     return { skipped: true, reason: 'NEXT_PUBLIC_SUPABASE_URL / ANON_KEY not set' }
   }
-  // Cheapest possible probe of Storage: list buckets. Doesn't read any
-  // file content; returns immediately with the bucket array (or auth error).
-  // We hit the REST API directly so this check is independent of the
-  // supabase-js client and its caching layers.
   const res = await fetch(`${url}/storage/v1/bucket`, {
     headers: { apikey: anon, Authorization: `Bearer ${anon}` },
-    signal: AbortSignal.timeout(CHECK_TIMEOUT_MS - 200),
+    signal: AbortSignal.timeout(timeoutMs - 200),
   })
   if (!res.ok) {
     return { ok: false, ms: Date.now() - t0, error: `storage HTTP ${res.status}` }
@@ -149,7 +165,7 @@ async function checkSupabaseStorage(): Promise<CheckResult> {
   return { ok: true, ms: Date.now() - t0 }
 }
 
-async function checkResend(): Promise<CheckResult> {
+async function checkResend(timeoutMs: number): Promise<CheckResult> {
   const t0 = Date.now()
   const key = process.env.RESEND_API_KEY?.trim()
   if (!key) return { skipped: true, reason: 'RESEND_API_KEY not set' }
@@ -164,15 +180,13 @@ async function checkResend(): Promise<CheckResult> {
   // dead key but is actually working fine.
   //
   // POST /emails is reachable by both permission tiers. Resend's auth
-  // layer runs before body validation, so we get cleanly separable
-  // signals:
+  // layer runs before body validation, so we get cleanly separable signals:
   //   - 401 → key truly rejected (revoked / wrong / expired)
   //   - 422 → key accepted, body failed validation (= service healthy)
   //   - 400 → same as 422 in some Resend versions
   //   - 5xx → Resend infrastructure problem
   //
-  // The empty body is deliberately not a valid email — no message is ever
-  // queued or charged.
+  // Empty body is deliberately not a valid email — no message is queued.
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -180,7 +194,7 @@ async function checkResend(): Promise<CheckResult> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({}),
-    signal: AbortSignal.timeout(CHECK_TIMEOUT_MS - 200),
+    signal: AbortSignal.timeout(timeoutMs - 200),
   })
 
   // Auth failures = real failures. 4xx body-validation errors are the
@@ -194,16 +208,13 @@ async function checkResend(): Promise<CheckResult> {
   return { ok: true, ms: Date.now() - t0 }
 }
 
-async function checkTelegram(): Promise<CheckResult> {
+async function checkTelegram(timeoutMs: number): Promise<CheckResult> {
   const t0 = Date.now()
   const token = process.env.TELEGRAM_BOT_TOKEN?.trim()
   if (!token) return { skipped: true, reason: 'TELEGRAM_BOT_TOKEN not set' }
-  // getMe = side-effect-free probe of the Bot API + our token. Returns
-  // { ok: true, result: { id, username, ... } } if both are healthy.
-  // Telegram returns 200 with `{ ok: false, description }` on auth errors
-  // — so check both HTTP status AND the JSON ok flag.
+  // getMe = side-effect-free probe of the Bot API + our token.
   const res = await fetch(`https://api.telegram.org/bot${token}/getMe`, {
-    signal: AbortSignal.timeout(CHECK_TIMEOUT_MS - 200),
+    signal: AbortSignal.timeout(timeoutMs - 200),
   })
   if (!res.ok) {
     return { ok: false, ms: Date.now() - t0, error: `telegram HTTP ${res.status}` }
@@ -219,18 +230,16 @@ async function checkTelegram(): Promise<CheckResult> {
   return { ok: true, ms: Date.now() - t0 }
 }
 
-async function checkUpstash(): Promise<CheckResult> {
+async function checkUpstash(timeoutMs: number): Promise<CheckResult> {
   const t0 = Date.now()
   const url = process.env.KV_REST_API_URL
   const token = process.env.KV_REST_API_TOKEN
   if (!url || !token) {
     return { skipped: true, reason: 'KV_REST_API_URL / KV_REST_API_TOKEN not set' }
   }
-  // PING is Upstash's recommended health probe — single command, no key
-  // namespace pollution, returns "PONG". REST API form: GET /ping.
   const res = await fetch(`${url}/ping`, {
     headers: { Authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(CHECK_TIMEOUT_MS - 200),
+    signal: AbortSignal.timeout(timeoutMs - 200),
   })
   if (!res.ok) {
     return { ok: false, ms: Date.now() - t0, error: `upstash HTTP ${res.status}` }
