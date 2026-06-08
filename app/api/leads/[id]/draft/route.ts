@@ -6,33 +6,36 @@ import { verifyLeadToken } from '@/lib/lead-tokens'
 /**
  * GET /api/leads/[id]/draft?t=<HMAC>
  *
- * Clicked from the "Reply in Gmail" button on a Telegram lead notification.
+ * Click target of the "Reply in Gmail" button on Telegram lead notifications.
  *
- * Returns an HTML interstitial page that:
- *   1. Auto-tries the iOS/Android Gmail app deep link (`googlegmail://co?...`)
- *      so the editor lands directly in compose with the reply pre-filled.
- *   2. Falls back to Gmail Web compose (`mail.google.com/?view=cm&fs=1&...`)
- *      after a short timeout if the app isn't installed.
- *   3. Always shows both buttons visibly, so even when Telegram's in-app
- *      browser blocks the auto-deeplink, the editor can pick one click.
+ * Flow:
+ *   1. First click on a lead → create an HTML draft in agent's Gmail via the
+ *      Apps Script webhook, save the returned threadId to `leads.gmail_draft_thread_id`.
+ *   2. Subsequent clicks on the same lead → skip Apps Script entirely, just
+ *      redirect to the cached draft URL. Avoids piling up duplicate drafts
+ *      in the agent's Drafts folder.
+ *   3. Render an HTML interstitial that auto-redirects to the Gmail drafts
+ *      URL (so iOS Safari/Telegram in-app browser can follow it cleanly) and
+ *      shows visible fallback buttons:
+ *        - Open in Gmail (primary, HTML preserved)
+ *        - Quick text reply (secondary, plain-text compose via deep link)
  *
- * Body content is plain text (URL-encoded), not HTML — that's a constraint
- * of both the `googlegmail://` and Gmail web `?body=` schemes. The reply
- * template stays the same, we just send the text variant.
- *
- * Previously this route called the Apps Script webhook to create a
- * server-side draft, then redirected to `mail.google.com/#drafts/{id}`.
- * Two problems with that approach:
- *   - Gmail's drafts URL opens the drafts FOLDER with the thread selected —
- *     not the compose window. The editor had to tap once more.
- *   - Inside Telegram's in-app browser the redirect chain often stalled or
- *     was intercepted, leaving the editor staring at a blank page.
- * The deep-link approach sidesteps both: no server-side draft, no
- * mail.google.com 302 chain, just a one-shot URL the OS knows what to
- * do with.
+ * Why interstitial vs direct 302: Telegram's in-app browser sometimes
+ * mishandles redirect chains to mail.google.com. The interstitial gives us
+ * a stable landing page where we control the redirect behavior, and the
+ * visible buttons act as a manual fallback if auto-redirect blocks.
  */
 
 const APP_NAME = 'ALAB Property'
+
+function escapeHtml(s: string): string {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
 
 function errorPage(title: string, body: string, status = 500) {
   return new NextResponse(
@@ -46,14 +49,56 @@ function errorPage(title: string, body: string, status = 500) {
   )
 }
 
-/** Minimal HTML escaping for values interpolated into the response body. */
-function escapeHtml(s: string): string {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
+/**
+ * Call the Apps Script webhook to create an HTML draft in the agent's
+ * Gmail. Returns the threadId on success, null on any failure (caller
+ * falls back to a plain-text compose link).
+ *
+ * The webhook is the same one used for Sheets append — separate `action`
+ * field routes to the draft handler on the script side.
+ */
+async function createGmailDraftViaAppsScript(args: {
+  to: string
+  subject: string
+  text: string
+  html: string
+}): Promise<{ threadId: string } | { error: string }> {
+  const webhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL?.trim()
+  const webhookSecret = process.env.GOOGLE_SHEETS_WEBHOOK_SECRET?.trim() || ''
+  if (!webhookUrl) return { error: 'webhook url not configured' }
+
+  const controller = new AbortController()
+  // 20s budget — Apps Script cold-starts can take 5-10s, allow room.
+  const timer = setTimeout(() => controller.abort(), 20_000)
+  try {
+    const res = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        secret: webhookSecret,
+        action: 'gmail-draft',
+        to: args.to,
+        subject: args.subject,
+        text: args.text,
+        html: args.html,
+      }),
+      signal: controller.signal,
+      redirect: 'follow',
+    })
+    const data = (await res.json().catch(() => ({}))) as {
+      ok?: boolean
+      threadId?: string
+      error?: string
+    }
+    if (!res.ok || !data.ok || !data.threadId) {
+      return { error: data.error || `apps script HTTP ${res.status}` }
+    }
+    return { threadId: data.threadId }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'fetch failed' }
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 export async function GET(
@@ -83,7 +128,7 @@ export async function GET(
 
   const { data: lead, error } = await supabaseAdmin
     .from('leads')
-    .select('id, name, email, property_title, property_slug, locale')
+    .select('id, name, email, property_title, property_slug, locale, gmail_draft_thread_id')
     .eq('id', id)
     .maybeSingle()
 
@@ -99,17 +144,16 @@ export async function GET(
       404,
     )
   }
-
   if (!lead.email) {
     return errorPage(
       'No email on lead',
-      `The lead doesn't have an email saved — can&apos;t open a reply window. Check the row in Supabase or contact the visitor via phone if you have it.`,
+      `The lead doesn&apos;t have an email saved — can&apos;t open a reply window. Check the row in Supabase or contact the visitor by phone.`,
       400,
     )
   }
 
-  // Reply in the same language the visitor wrote in. Older rows (created
-  // before the `leads.locale` column was added) have null → fall back to RU.
+  // Reply in the same language the visitor used. Old rows (created before
+  // the `leads.locale` column existed) read as null → default to RU.
   const replyLocale: 'ru' | 'en' = lead.locale === 'en' ? 'en' : 'ru'
   const isRu = replyLocale === 'ru'
 
@@ -122,45 +166,87 @@ export async function GET(
     locale: replyLocale,
   })
 
-  // Cap body length. Gmail's web compose URL works up to ~2KB total; the
-  // app deep-link is more generous but we cap at the same conservative
-  // limit so the same string fits in both. Long property descriptions
-  // would otherwise truncate awkwardly.
+  // Cached threadId from a previous click? Reuse it — no need to spam the
+  // agent's Drafts folder with new copies on every click. If null, this is
+  // the first click for this lead.
+  let threadId: string | null = lead.gmail_draft_thread_id ?? null
+  let draftError: string | null = null
+
+  if (!threadId) {
+    const result = await createGmailDraftViaAppsScript({
+      to: lead.email,
+      subject: tpl.subject,
+      text: tpl.text,
+      html: tpl.html,
+    })
+    if ('threadId' in result) {
+      threadId = result.threadId
+      // Persist so future clicks on this lead jump straight to the same
+      // draft. We ignore errors here on purpose — if the UPDATE fails
+      // (Supabase blip, column missing), we still serve the draft URL
+      // for this request; the next click just creates another draft.
+      const { error: updateError } = await supabaseAdmin
+        .from('leads')
+        .update({ gmail_draft_thread_id: threadId })
+        .eq('id', id)
+      if (updateError) {
+        console.error('[api/leads/draft] failed to cache threadId:', updateError.message)
+      }
+    } else {
+      draftError = result.error
+      console.error('[api/leads/draft] apps script draft failed:', draftError)
+    }
+  }
+
+  // Build URLs that the interstitial offers. We always have the plain-text
+  // compose fallback ready (no Apps Script dependency). The HTML draft URL
+  // is only set if Apps Script succeeded or we had a cached threadId.
+  const htmlDraftUrl = threadId
+    ? `https://mail.google.com/mail/u/0/#drafts/${encodeURIComponent(threadId)}`
+    : null
+
+  // Cap body length for the plain-text fallback. Gmail's compose URL accepts
+  // ~2KB total — bigger and the browser silently truncates or rejects.
   const MAX_BODY = 1500
   const bodyText =
     tpl.text.length > MAX_BODY ? tpl.text.slice(0, MAX_BODY - 3) + '…' : tpl.text
-
-  const to = encodeURIComponent(lead.email)
+  const toEnc = encodeURIComponent(lead.email)
   const subjectEnc = encodeURIComponent(tpl.subject)
   const bodyEnc = encodeURIComponent(bodyText)
+  // Gmail iOS/Android app deep link for compose (plain text only).
+  const appComposeUrl = `googlegmail://co?to=${toEnc}&subject=${subjectEnc}&body=${bodyEnc}`
+  // Gmail Web compose URL — works in any browser, mobile or desktop.
+  const webComposeUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${toEnc}&su=${subjectEnc}&body=${bodyEnc}`
 
-  // Gmail iOS/Android app deep link. `co` = compose. Uses `subject` (full
-  // word) — different from the web URL which uses `su`.
-  const appUrl = `googlegmail://co?to=${to}&subject=${subjectEnc}&body=${bodyEnc}`
-
-  // Gmail Web compose URL — works in browsers (including Telegram in-app),
-  // mobile and desktop. `view=cm` puts compose in pop-up mode, `fs=1` makes
-  // it full-screen so there's no missing-window edge case.
-  const webUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subjectEnc}&body=${bodyEnc}`
-
-  // i18n string blobs — minimal, just for this single page.
+  // Localised UI strings for this single interstitial.
   const t = isRu
     ? {
         title: 'Открываю Gmail',
         replyTo: 'Ответ для',
-        appBtn: 'Открыть в приложении Gmail',
-        webBtn: 'Открыть в браузере',
-        note: 'Если приложение не открылось — нажми «Открыть в браузере».',
+        primary: 'Открыть HTML-черновик',
+        secondary: 'Быстрый ответ (текст)',
+        autoNote: 'Перенаправляю в Gmail…',
+        fallbackNote:
+          'Если приложение Gmail не открылось — используй веб-кнопку или быстрый текстовый ответ.',
+        draftErrorNote:
+          'Не удалось создать HTML-черновик. Используй быстрый ответ ниже — это рабочий вариант с обычным текстом.',
       }
     : {
         title: 'Opening Gmail',
         replyTo: 'Reply to',
-        appBtn: 'Open in Gmail app',
-        webBtn: 'Open in browser',
-        note: `If the app didn&apos;t open, tap "Open in browser".`,
+        primary: 'Open HTML draft',
+        secondary: 'Quick text reply',
+        autoNote: 'Redirecting to Gmail…',
+        fallbackNote: `If Gmail didn&apos;t open, use the web button or the quick text reply.`,
+        draftErrorNote: `Couldn&apos;t create the HTML draft. Use the quick reply below — plain text still works.`,
       }
 
   const recipient = escapeHtml(lead.name || lead.email)
+
+  // The auto-redirect target: HTML draft if available, otherwise the web
+  // compose URL (plain text). This way the agent always lands somewhere
+  // useful even if Apps Script is down.
+  const autoRedirectUrl = htmlDraftUrl ?? webComposeUrl
 
   const html = `<!doctype html>
 <html lang="${replyLocale}">
@@ -214,10 +300,27 @@ export async function GET(
     color: #F5EFE6;
   }
   .btn-secondary:hover { background: rgba(245,239,230,0.06); }
+  .btn-disabled {
+    background: rgba(245,239,230,0.08);
+    color: rgba(245,239,230,0.35);
+    cursor: not-allowed;
+    pointer-events: none;
+  }
   .note {
     margin-top: 16px;
     font-size: 11px; line-height: 1.5;
     color: rgba(245,239,230,0.45);
+  }
+  .draft-error {
+    margin: 10px 0 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: rgba(255, 180, 80, 0.08);
+    border: 1px solid rgba(255, 180, 80, 0.25);
+    color: rgba(255, 200, 130, 0.85);
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: left;
   }
 </style>
 </head>
@@ -228,43 +331,25 @@ export async function GET(
     <small>${escapeHtml(t.replyTo)}</small>
     ${recipient}
   </div>
-  <a href="${appUrl}" class="btn btn-primary">${escapeHtml(t.appBtn)}</a>
-  <a href="${webUrl}" target="_blank" rel="noopener" class="btn btn-secondary">${escapeHtml(t.webBtn)}</a>
-  <p class="note">${t.note}</p>
+  ${
+    htmlDraftUrl
+      ? `<a href="${htmlDraftUrl}" class="btn btn-primary">${escapeHtml(t.primary)}</a>`
+      : `<div class="btn btn-disabled">${escapeHtml(t.primary)}</div>
+         <div class="draft-error">${t.draftErrorNote}</div>`
+  }
+  <a href="${appComposeUrl}" class="btn btn-secondary">${escapeHtml(t.secondary)}</a>
+  <p class="note">${htmlDraftUrl ? t.autoNote : t.fallbackNote}</p>
 </div>
 <script>
-  // Auto-try the Gmail app deep link once the page renders. If the app is
-  // installed, the OS hands off to it and we're done. If not, the iframe
-  // approach below silently fails — no popup, no broken-link error — and
-  // the user can use the visible buttons.
-  //
-  // Why iframe instead of direct location: setting top-level location
-  // to a custom scheme triggers a "page can't be opened" alert on some
-  // platforms when the scheme isn't registered. iframe-based deep-link
-  // attempts are silent and widely compatible.
-  //
-  // After ~1.5s, if the document is still visible (the OS didn't hand off
-  // to Gmail), fall through to the web URL. visibilitychange tells us
-  // when the user has left for the app.
+  // Auto-redirect: prefer HTML draft if Apps Script gave us one, fall back
+  // to web compose URL otherwise. Short delay lets the page render so the
+  // user sees the buttons before the OS hands off — useful when the
+  // redirect target opens in a different app.
   (function() {
-    var appUrl = ${JSON.stringify(appUrl)};
-    var webUrl = ${JSON.stringify(webUrl)};
-    var handed = false;
-    document.addEventListener('visibilitychange', function() {
-      if (document.hidden) handed = true;
-    });
+    var target = ${JSON.stringify(autoRedirectUrl)};
     setTimeout(function() {
-      var iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.src = appUrl;
-      document.body.appendChild(iframe);
-      setTimeout(function() { try { iframe.remove(); } catch(_) {} }, 200);
-    }, 80);
-    setTimeout(function() {
-      if (!handed && !document.hidden) {
-        window.location.href = webUrl;
-      }
-    }, 1500);
+      window.location.href = target;
+    }, 600);
   })();
 </script>
 </body>
@@ -274,8 +359,6 @@ export async function GET(
     status: 200,
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
-      // Always fresh — the URL contains a per-lead HMAC token; never let an
-      // intermediate cache serve a stale page for a different lead.
       'Cache-Control': 'no-store, max-age=0',
     },
   })
