@@ -39,8 +39,16 @@ export default async function OpengraphImage() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {/*
+            Satori (the JSX→PNG engine behind ImageResponse) requires every
+            <div> with children to have an explicit `display`. Without it,
+            Vercel logs "Expected <div> to have explicit display: flex"
+            warnings on every OG fetch.
+          */}
           <div
             style={{
+              display: 'flex',
+              flexWrap: 'wrap',
               fontSize: 92,
               lineHeight: 1.05,
               fontWeight: 400,
@@ -56,6 +64,7 @@ export default async function OpengraphImage() {
           </div>
           <div
             style={{
+              display: 'flex',
               marginTop: 32,
               fontSize: 28,
               color: '#F5EFE6',
