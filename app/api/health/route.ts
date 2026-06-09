@@ -155,6 +155,27 @@ async function checkSupabaseStorage(timeoutMs: number): Promise<CheckResult> {
   if (!url || !anon) {
     return { skipped: true, reason: 'NEXT_PUBLIC_SUPABASE_URL / ANON_KEY not set' }
   }
+  // Prefer probing a real, public storage object — that's the path our pages
+  // and next/image actually hit. The admin-style /storage/v1/bucket endpoint
+  // used previously goes through a different code path on Supabase's side
+  // and gave us 5s timeouts on 2026-06-09 while the public CDN serving real
+  // images was fine. Result: false-positive "SITE DOWN" alerts.
+  //
+  // Set `STORAGE_HEALTH_PROBE_URL` to the absolute URL of a tiny, permanent
+  // public object (e.g. https://<proj>.supabase.co/storage/v1/object/public/property-photos/health.png).
+  // Without it, we fall back to probing the bucket listing API — same as
+  // before, with the same false-positive risk.
+  const probeUrl = process.env.STORAGE_HEALTH_PROBE_URL?.trim()
+  if (probeUrl) {
+    const res = await fetch(probeUrl, {
+      method: 'HEAD',
+      signal: AbortSignal.timeout(timeoutMs - 200),
+    })
+    if (!res.ok) {
+      return { ok: false, ms: Date.now() - t0, error: `storage HTTP ${res.status}` }
+    }
+    return { ok: true, ms: Date.now() - t0 }
+  }
   const res = await fetch(`${url}/storage/v1/bucket`, {
     headers: { apikey: anon, Authorization: `Bearer ${anon}` },
     signal: AbortSignal.timeout(timeoutMs - 200),

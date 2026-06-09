@@ -395,61 +395,68 @@ async function handleLeadSubmission(req: NextRequest): Promise<NextResponse> {
       )
       const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://alabproperty.com').replace(/\/+$/, '')
 
-      for (const r of recipients) {
-        const tgLines = buildLeadMessage(body, r.lang)
-        // Inline keyboard "Reply in Gmail" button.
-        // Preferred flow: open our /draft endpoint which creates a Gmail draft
-        // via Gmail API (full HTML template) and redirects to Gmail web UI
-        // where admin can edit & send. Fallback to plain compose URL if Gmail
-        // OAuth is not configured.
-        let replyUrl: string
-        if (gmailDraftConfigured) {
-          const token = signLeadId(leadId!)
-          replyUrl = `${siteUrl}/api/leads/${encodeURIComponent(leadId!)}/draft?t=${token}`
-        } else {
-          const replyForCompose = renderReplyTemplate({
-            name: body.name,
-            inquiry: buildLeadMessage(body, r.lang),
-            propertyTitle: body.propertyTitle,
-            propertyLink: body.propertySlug ? `https://alabproperty.com/properties/${body.propertySlug}` : undefined,
-            locale: r.lang,
-          })
-          replyUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(body.email)}&su=${encodeURIComponent(replyForCompose.subject)}&body=${encodeURIComponent(replyForCompose.text)}`
-        }
-        const replyButtonLabel = r.lang === 'en' ? '✉️ Reply in Gmail' : '✉️ Ответить в Gmail'
-        const inline_keyboard = [[{ text: replyButtonLabel, url: replyUrl }]]
-        if (body.propertySlug) {
-          const openLabel = r.lang === 'en' ? '🏠 Open property' : '🏠 Открыть объект'
-          inline_keyboard.push([
-            { text: openLabel, url: `https://alabproperty.com/properties/${body.propertySlug}` },
-          ])
-        }
-
-        const controller = new AbortController()
-        const timeout = setTimeout(() => controller.abort(), 10_000)
-        try {
-          const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: r.chat_id,
-              text: tgLines,
-              parse_mode: 'Markdown',
-              disable_web_page_preview: true,
-              reply_markup: { inline_keyboard },
-            }),
-            signal: controller.signal,
-          })
-          if (!res.ok) {
-            const detail = await res.text().catch(() => '')
-            console.error('[api/leads] telegram send failed:', r.chat_id, res.status, scrubTokens(detail))
+      // Fan-out all sends in parallel. Previously the loop was sequential
+      // with a per-recipient 10s timeout — with N subscribers worst-case the
+      // user's POST blocked for N*10s before the {ok:true} response came
+      // back. Promise.allSettled keeps a slow/broken recipient from holding
+      // up the others (and the response).
+      await Promise.allSettled(
+        recipients.map(async (r) => {
+          const tgLines = buildLeadMessage(body, r.lang)
+          // Inline keyboard "Reply in Gmail" button.
+          // Preferred flow: open our /draft endpoint which creates a Gmail draft
+          // via Gmail API (full HTML template) and redirects to Gmail web UI
+          // where admin can edit & send. Fallback to plain compose URL if Gmail
+          // OAuth is not configured.
+          let replyUrl: string
+          if (gmailDraftConfigured) {
+            const token = signLeadId(leadId!)
+            replyUrl = `${siteUrl}/api/leads/${encodeURIComponent(leadId!)}/draft?t=${token}`
+          } else {
+            const replyForCompose = renderReplyTemplate({
+              name: body.name,
+              inquiry: buildLeadMessage(body, r.lang),
+              propertyTitle: body.propertyTitle,
+              propertyLink: body.propertySlug ? `https://alabproperty.com/properties/${body.propertySlug}` : undefined,
+              locale: r.lang,
+            })
+            replyUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(body.email)}&su=${encodeURIComponent(replyForCompose.subject)}&body=${encodeURIComponent(replyForCompose.text)}`
           }
-        } catch (e) {
-          console.error('[api/leads] telegram fetch failed:', r.chat_id, scrubTokens(e))
-        } finally {
-          clearTimeout(timeout)
-        }
-      }
+          const replyButtonLabel = r.lang === 'en' ? '✉️ Reply in Gmail' : '✉️ Ответить в Gmail'
+          const inline_keyboard = [[{ text: replyButtonLabel, url: replyUrl }]]
+          if (body.propertySlug) {
+            const openLabel = r.lang === 'en' ? '🏠 Open property' : '🏠 Открыть объект'
+            inline_keyboard.push([
+              { text: openLabel, url: `https://alabproperty.com/properties/${body.propertySlug}` },
+            ])
+          }
+
+          const controller = new AbortController()
+          const timeout = setTimeout(() => controller.abort(), 10_000)
+          try {
+            const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: r.chat_id,
+                text: tgLines,
+                parse_mode: 'Markdown',
+                disable_web_page_preview: true,
+                reply_markup: { inline_keyboard },
+              }),
+              signal: controller.signal,
+            })
+            if (!res.ok) {
+              const detail = await res.text().catch(() => '')
+              console.error('[api/leads] telegram send failed:', r.chat_id, res.status, scrubTokens(detail))
+            }
+          } catch (e) {
+            console.error('[api/leads] telegram fetch failed:', r.chat_id, scrubTokens(e))
+          } finally {
+            clearTimeout(timeout)
+          }
+        }),
+      )
     } else {
       console.warn('[api/leads] TELEGRAM_BOT_TOKEN not configured — TG skipped')
     }

@@ -54,7 +54,7 @@ export function SearchBar() {
         supabase.from('taxonomy_cities').select('slug, name').order('slug'),
         supabase.from('taxonomy_property_types').select('slug, name').order('slug'),
         supabase.from('taxonomy_districts').select('slug, name, city_slug').order('slug'),
-        supabase.from('properties').select('type, city, district'),
+        supabase.from('properties').select('type, city, district').eq('visibility', 'published'),
       ]);
       if (cancelled) return;
       if (c.data) setCities(c.data as TaxonomyRow[]);
