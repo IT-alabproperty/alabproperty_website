@@ -123,6 +123,10 @@ function Lightbox({
   onClose: () => void;
 }) {
   const [index, setIndex] = useState(startIndex);
+  // Per-URL loaded flag. We use the URL (not the index) so navigating away
+  // and back doesn't re-flash the spinner for an image we already fetched.
+  const [loaded, setLoaded] = useState<Set<string>>(new Set());
+  const isCurrentLoaded = loaded.has(images[index]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -142,6 +146,33 @@ function Lightbox({
       document.body.style.overflow = '';
     };
   }, []);
+
+  // Prefetch adjacent images so the next ← / → press feels instant. The
+  // active <Image> below picks a srcset variant based on viewport + DPR; we
+  // mirror its `srcset`/`sizes` here so the browser picks the SAME variant
+  // and warms the HTTP cache for the exact URL that will be requested on
+  // navigation. Without matching variants the prefetch lands in a different
+  // cache key (e.g. w=1920 prefetched but Retina <Image> hits w=3840) and
+  // does no good.
+  useEffect(() => {
+    if (images.length < 2) return;
+    const NEXT_DEVICE_SIZES = [640, 750, 828, 1080, 1200, 1920, 2048, 3840];
+    const buildSrcset = (src: string) =>
+      NEXT_DEVICE_SIZES
+        .map((w) => `/_next/image?url=${encodeURIComponent(src)}&w=${w}&q=75 ${w}w`)
+        .join(', ');
+    const targets = [
+      images[(index + 1) % images.length],
+      images[(index - 1 + images.length) % images.length],
+    ];
+    const els: HTMLImageElement[] = targets.map((src) => {
+      const img = new window.Image();
+      img.sizes = '(max-width: 1400px) 90vw, 1400px';
+      img.srcset = buildSrcset(src);
+      return img;
+    });
+    return () => { els.forEach((img) => { img.srcset = ''; img.src = ''; }); };
+  }, [index, images]);
 
   return (
     <div
@@ -167,26 +198,45 @@ function Lightbox({
         <ChevronLeft className="h-6 w-6" strokeWidth={1.5} />
       </button>
 
-      <div className="relative flex h-[80vh] w-[90vw] max-w-[1400px] items-center justify-center overflow-hidden rounded-3xl bg-ink/20 shadow-2xl shadow-black/40">
-        <div className="absolute inset-0 overflow-hidden">
-          <Image
-            src={images[index]}
-            alt=""
-            fill
-            sizes="100vw"
-            className="object-cover blur-2xl opacity-30 scale-105"
-            priority
-          />
-          <div className="absolute inset-0 bg-ink/30" />
-        </div>
+      <div className="relative flex h-[80vh] w-[90vw] max-w-[1400px] items-center justify-center overflow-hidden rounded-3xl bg-ink/40 shadow-2xl shadow-black/40">
+        {/*
+          Loading spinner. Visible until the active image's onLoad fires.
+          Previously the panel showed a blurred copy of the image as a
+          background, which forced a second Vercel image-optimizer fetch
+          (different `sizes` → different cache key → doubled bytes on every
+          lightbox open). Solid tinted backdrop achieves the same look and
+          halves the bytes-per-open.
+        */}
+        {!isCurrentLoaded && (
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 flex items-center justify-center"
+          >
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-cream/30 border-t-gold" />
+          </div>
+        )}
 
         <Image
+          // `key` forces React to remount on src change. Without it, next/image
+          // sometimes keeps the previous bitmap visible until the new one
+          // decodes, which makes the spinner state look out of sync with the
+          // image swap.
+          key={images[index]}
           src={images[index]}
           alt={`Photo ${index + 1}`}
           fill
           sizes="(max-width: 1400px) 90vw, 1400px"
-          className="relative object-contain"
+          className={`relative object-contain transition-opacity duration-200 ${isCurrentLoaded ? 'opacity-100' : 'opacity-0'}`}
           priority
+          onLoad={() => {
+            const src = images[index];
+            setLoaded((prev) => {
+              if (prev.has(src)) return prev;
+              const next = new Set(prev);
+              next.add(src);
+              return next;
+            });
+          }}
         />
       </div>
 
