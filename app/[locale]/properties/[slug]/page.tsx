@@ -106,21 +106,48 @@ export async function generateMetadata({
     });
   }
   const name = property.name[locale] || property.name.ru;
-  // Meta description = key specs upfront (price, bedrooms, area, district)
-  // + a teaser from the long description. This is what Google shows in the
-  // result snippet — packing specs gives users an at-a-glance value prop.
-  const specsParts: string[] = [];
+  // ───── Unique title ─────
+  // Multiple units in the same building share `property.name`, so titling
+  // by name alone produces identical <title> tags across N pages — Semrush
+  // flagged 14 such duplicates. We layer in unit-specific keywords (bedrooms,
+  // area, floor) AND always append the unit code at the end when present.
+  // Two units in the same building can legitimately have identical bedrooms
+  // + area + floor (different stack, same layout) — the code is the only
+  // guaranteed-unique identifier.
+  const titleTags: string[] = [];
   if (property.bedrooms) {
-    specsParts.push(locale === 'ru' ? `${property.bedrooms}-комн.` : `${property.bedrooms}-bed`);
+    titleTags.push(locale === 'ru' ? `${property.bedrooms}-комн.` : `${property.bedrooms}-bed`);
   }
-  if (property.areaSqm) specsParts.push(`${property.areaSqm} m²`);
+  if (property.areaSqm) titleTags.push(`${property.areaSqm}м²`);
+  if (property.floor) {
+    titleTags.push(locale === 'ru' ? `этаж ${property.floor}` : `floor ${property.floor}`);
+  }
+  if (property.code) titleTags.push(property.code);
+  const titleSuffix = titleTags.length > 0 ? ' — ' + titleTags.join(', ') : '';
+  const title = `${name}${titleSuffix}`;
+
+  // ───── Unique description ─────
+  // Same trap with description text — buildings share copy in the DB, so
+  // sticking the long description first means the first 160 chars are
+  // identical across units. Lead with unit-specific facts (price, exact
+  // area, floor, code, locality) and only THEN tail with the shared blurb.
+  const descSpecs: string[] = [];
+  if (property.bedrooms) {
+    descSpecs.push(locale === 'ru' ? `${property.bedrooms}-комн.` : `${property.bedrooms}-bed`);
+  }
+  if (property.areaSqm) descSpecs.push(`${property.areaSqm} m²`);
   if (property.priceThb) {
     const millions = property.priceThb >= 1_000_000 ? `฿${Math.round(property.priceThb / 100_000) / 10}M` : `฿${property.priceThb}`;
-    specsParts.push(locale === 'ru' ? `от ${millions}` : `from ${millions}`);
+    descSpecs.push(locale === 'ru' ? `от ${millions}` : `from ${millions}`);
   }
+  if (property.floor) {
+    const floorOf = property.totalFloors ? `/${property.totalFloors}` : '';
+    descSpecs.push(locale === 'ru' ? `этаж ${property.floor}${floorOf}` : `floor ${property.floor}${floorOf}`);
+  }
+  if (property.code) descSpecs.push(property.code);
   const localityForMeta = property.address?.[locale] || property.address?.ru;
-  if (localityForMeta) specsParts.push(localityForMeta);
-  const specsLine = specsParts.join(' · ');
+  if (localityForMeta) descSpecs.push(localityForMeta);
+  const specsLine = descSpecs.join(' · ');
   const longText = property.description[locale] || property.description.ru || '';
   const description = truncate(
     [specsLine, longText].filter(Boolean).join(' — '),
@@ -128,7 +155,7 @@ export async function generateMetadata({
   );
   return buildMetadata({
     locale,
-    title: name,
+    title,
     description,
     path: `/properties/${property.slug}`,
     image: property.coverImage || property.gallery?.[0],
