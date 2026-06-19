@@ -434,7 +434,11 @@ function PropertyContent({
           {property.floor && (
             <SpecCell icon={<Building2 className="h-4 w-4" strokeWidth={1.5} />} label={tProperty('floor')} value={`${property.floor}/${property.totalFloors ?? property.floor}`} />
           )}
-          <SpecCell icon={<Calendar className="h-4 w-4" strokeWidth={1.5} />} label={tProperty('year')} value={`${property.yearBuilt}`} />
+          <SpecCell
+            icon={<Calendar className="h-4 w-4" strokeWidth={1.5} />}
+            label={tProperty('year')}
+            value={property.yearBuilt ? `${property.yearBuilt}` : tProperty('underConstruction')}
+          />
           <SpecCell
             icon={<ShieldCheck className="h-4 w-4" strokeWidth={1.5} />}
             label={tCatalog('ownership')}

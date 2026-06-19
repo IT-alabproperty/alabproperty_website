@@ -136,7 +136,8 @@
     "bathrooms": "Bathrooms",
     "area": "Area",
     "floor": "Floor",
-    "year": "Year"
+    "year": "Year",
+    "underConstruction": "Under construction"
   },
 
   "Guarantee": {

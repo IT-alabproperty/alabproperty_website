@@ -136,7 +136,8 @@
     "bathrooms": "Санузлы",
     "area": "Площадь",
     "floor": "Этаж",
-    "year": "Год"
+    "year": "Год",
+    "underConstruction": "В стройке"
   },
 
   "Guarantee": {
