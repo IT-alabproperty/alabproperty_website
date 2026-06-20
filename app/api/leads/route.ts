@@ -45,6 +45,39 @@ interface CleanLead {
   locale: 'ru' | 'en'
 }
 
+/**
+ * Verify a Cloudflare Turnstile token against the upstream siteverify endpoint.
+ * Returns true if the token is valid OR if Turnstile is misconfigured/down — we
+ * never want to block real users because of an external dependency. The honeypot
+ * + timestamp checks already catch the vast majority of spam; Turnstile is the
+ * last line of defence against sophisticated bots.
+ */
+async function verifyTurnstile(token: string, ip: string): Promise<boolean> {
+  const secret = process.env.TURNSTILE_SECRET_KEY
+  if (!secret) return true // not configured — caller already checks this, but be safe
+  if (!token) return false // configured but client sent no token = suspicious
+  try {
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ secret, response: token, remoteip: ip }).toString(),
+      signal: AbortSignal.timeout(5_000),
+    })
+    if (!res.ok) {
+      console.warn('[api/leads] turnstile siteverify non-2xx:', res.status)
+      return true // CF API hiccup → don't block real users
+    }
+    const data = await res.json() as { success: boolean; 'error-codes'?: string[] }
+    if (!data.success) {
+      console.info('[api/leads] turnstile rejected:', data['error-codes'])
+    }
+    return data.success === true
+  } catch (e) {
+    console.warn('[api/leads] turnstile verify error:', scrubTokens(e))
+    return true // network/timeout → don't block real users
+  }
+}
+
 function validate(raw: unknown): { ok: true; data: CleanLead } | { ok: false; error: string } {
   if (!raw || typeof raw !== 'object') return { ok: false, error: 'body must be object' }
   const b = raw as Record<string, unknown>
@@ -121,6 +154,52 @@ export async function POST(req: NextRequest) {
 async function handleLeadSubmission(req: NextRequest): Promise<NextResponse> {
   const ip = clientIp(req)
 
+  let raw: unknown
+  try { raw = await req.json() } catch {
+    return NextResponse.json({ error: 'invalid json' }, { status: 400 })
+  }
+
+  // Honeypot — a hidden `website` field in the form that real users never see.
+  // Bots autofill every input they find, so any non-empty value here is spam.
+  // Return a fake 200 so the bot thinks it succeeded and moves on — that's
+  // cheaper than a 4xx that prompts a retry. Done BEFORE rate-limit so spam
+  // doesn't burn the limiter quota for real users on the same IP.
+  if (raw && typeof raw === 'object' && typeof (raw as Record<string, unknown>).website === 'string'
+      && ((raw as Record<string, unknown>).website as string).length > 0) {
+    console.info('[api/leads] honeypot tripped, silently dropping')
+    return NextResponse.json({ ok: true, id: 'spam' }, { status: 200 })
+  }
+
+  // Timestamp check — real users take >2s to fill the form. Bots POST instantly.
+  // `formLoadedAt` is the client Date.now() captured when the form mounted.
+  // The 2s threshold is conservative (a fast typer can fill all fields in ~5s)
+  // and tolerates clock skew (we only care about a lower bound).
+  const formLoadedAt = typeof (raw as Record<string, unknown>).formLoadedAt === 'number'
+    ? (raw as Record<string, unknown>).formLoadedAt as number
+    : 0
+  if (formLoadedAt > 0) {
+    const elapsed = Date.now() - formLoadedAt
+    if (elapsed < 2_000) {
+      console.info('[api/leads] timestamp check failed (elapsed=', elapsed, 'ms), dropping')
+      return NextResponse.json({ ok: true, id: 'spam' }, { status: 200 })
+    }
+  }
+
+  // Cloudflare Turnstile — invisible CAPTCHA. Active only when both env vars
+  // are set; without them we fall back to honeypot + timestamp alone (no-op).
+  // Setup: cloudflare.com/dash → Turnstile → New Site → get sitekey + secret.
+  //   Vercel env: NEXT_PUBLIC_TURNSTILE_SITE_KEY (public) + TURNSTILE_SECRET_KEY (server).
+  const turnstileToken = typeof (raw as Record<string, unknown>).turnstileToken === 'string'
+    ? (raw as Record<string, unknown>).turnstileToken as string
+    : ''
+  if (process.env.TURNSTILE_SECRET_KEY) {
+    const ok = await verifyTurnstile(turnstileToken, ip)
+    if (!ok) {
+      console.info('[api/leads] turnstile verify failed, dropping')
+      return NextResponse.json({ ok: true, id: 'spam' }, { status: 200 })
+    }
+  }
+
   // Rate-limit failures (Upstash KV outage) shouldn't 500 the form — the form
   // is more important than the limiter. Treat any limiter error as "let it
   // through" and continue.
@@ -136,11 +215,6 @@ async function handleLeadSubmission(req: NextRequest): Promise<NextResponse> {
       { error: 'too many requests, try again later' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } },
     )
-  }
-
-  let raw: unknown
-  try { raw = await req.json() } catch {
-    return NextResponse.json({ error: 'invalid json' }, { status: 400 })
   }
 
   const validated = validate(raw)

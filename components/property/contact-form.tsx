@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useCallback, useRef, useState, type FormEvent } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Check, Loader2 } from 'lucide-react';
 import { Eyebrow } from '@/components/ui/eyebrow';
+import { TurnstileWidget } from '@/components/turnstile-widget';
 import type { Locale, Property } from '@/lib/types';
 
 type ContactChannel = 'email' | 'phone' | 'whatsapp';
@@ -41,6 +42,17 @@ export function ContactForm({ property }: { property?: Property }) {
     message: defaultMessage,
     cryptoPayment: false,
   });
+  // Honeypot — paired with a visually-hidden <input name="website"> below.
+  // Real users never see it, bots autofill it. Server treats any non-empty
+  // value as spam and silently 200s without doing real work.
+  const [honeypot, setHoneypot] = useState('');
+  // Timestamp captured at mount — server rejects submissions where the form
+  // was filled in under 2 seconds (bots POST instantly; humans don't).
+  const formLoadedAtRef = useRef<number>(Date.now());
+  // Turnstile token — set by the invisible CF widget after it's challenged.
+  // Empty string is fine when Turnstile isn't configured (env var unset).
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const onTurnstileToken = useCallback((token: string) => setTurnstileToken(token), []);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -80,6 +92,9 @@ export function ContactForm({ property }: { property?: Property }) {
       preferredContact: data.channel,
       locale,
       submittedAt: new Date().toISOString(),
+      website: honeypot, // empty for humans; bots autofill → server drops
+      formLoadedAt: formLoadedAtRef.current, // <2s elapsed → server drops
+      turnstileToken, // empty if CF Turnstile not configured (env unset)
     };
 
     try {
@@ -127,6 +142,25 @@ export function ContactForm({ property }: { property?: Property }) {
 
   return (
     <form onSubmit={handleSubmit} className="rounded-lg bg-cream-warm/40 p-6 sm:p-10">
+      {/* Honeypot: visually hidden field named "website" that bots autofill.
+          tabindex=-1 + aria-hidden + autoComplete=off keep real users out. */}
+      <div aria-hidden="true" style={{ position: 'absolute', left: '-10000px', top: 'auto', width: 1, height: 1, overflow: 'hidden' }}>
+        <label>
+          Website
+          <input
+            type="text"
+            name="website"
+            tabIndex={-1}
+            autoComplete="off"
+            value={honeypot}
+            onChange={(e) => setHoneypot(e.target.value)}
+          />
+        </label>
+      </div>
+
+      {/* Cloudflare Turnstile — invisible CAPTCHA. No-op without env vars. */}
+      <TurnstileWidget onToken={onTurnstileToken} />
+
       <Eyebrow className="mb-6">{t('title')}</Eyebrow>
       <p className="mb-8 max-w-[420px] text-base leading-[1.6] text-teak-warm">{t('subtitle')}</p>
 

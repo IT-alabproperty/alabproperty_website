@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Send, Check, AlertCircle } from 'lucide-react';
+import { TurnstileWidget } from '@/components/turnstile-widget';
 import type { Property, Locale } from '@/lib/types';
 import { useLocale } from 'next-intl';
 
@@ -38,6 +39,14 @@ export function ContactForm({ property }: ContactFormProps) {
   const t = useTranslations('Contact');
   const locale = useLocale() as Locale;
   const [data, setData] = useState<FormData>(initial);
+  // Honeypot — empty for real users, bots autofill it; server drops any
+  // submission where this field is non-empty. See the hidden <input> below.
+  const [honeypot, setHoneypot] = useState('');
+  // Timestamp captured at mount — server rejects submissions filled in <2s.
+  const formLoadedAtRef = useRef<number>(Date.now());
+  // Turnstile token — set by invisible CF widget; no-op when env not set.
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const onTurnstileToken = useCallback((token: string) => setTurnstileToken(token), []);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -77,6 +86,9 @@ export function ContactForm({ property }: ContactFormProps) {
       // their confirmation email + Markdown reply template.
       locale,
       submittedAt: new Date().toISOString(),
+      website: honeypot, // empty for humans; bots autofill → server drops
+      formLoadedAt: formLoadedAtRef.current, // <2s elapsed → server drops
+      turnstileToken, // empty if CF Turnstile not configured (env unset)
     };
 
     try {
@@ -126,6 +138,24 @@ export function ContactForm({ property }: ContactFormProps) {
       className="rounded-lg border border-[var(--line)] bg-paper p-6 sm:p-9"
       noValidate
     >
+      {/* Honeypot: hidden field bots autofill. See state declaration above. */}
+      <div aria-hidden="true" style={{ position: 'absolute', left: '-10000px', top: 'auto', width: 1, height: 1, overflow: 'hidden' }}>
+        <label>
+          Website
+          <input
+            type="text"
+            name="website"
+            tabIndex={-1}
+            autoComplete="off"
+            value={honeypot}
+            onChange={(e) => setHoneypot(e.target.value)}
+          />
+        </label>
+      </div>
+
+      {/* Cloudflare Turnstile — invisible CAPTCHA. No-op without env vars. */}
+      <TurnstileWidget onToken={onTurnstileToken} />
+
       <div className="mb-7">
         <h3 className="font-serif text-2xl font-normal text-teak-deep">{t('title')}</h3>
         <p className="mt-1.5 text-sm text-muted">{t('subtitle')}</p>
