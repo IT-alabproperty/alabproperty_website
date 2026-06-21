@@ -458,7 +458,7 @@ function PropertyContent({
           <div>
             <Eyebrow className="mb-6">{t('aboutEyebrow')}</Eyebrow>
             <h2 className="mb-6 font-serif text-3xl font-normal text-teak-deep sm:text-4xl">{t('aboutTitle')}</h2>
-            <p className="text-[17px] leading-[1.7] text-teak-warm">{property.description[locale]}</p>
+            <p className="max-w-[68ch] text-[17px] leading-[1.85] text-teak-warm">{property.description[locale]}</p>
 
             {property.view && (
               <div className="mt-8 flex items-start gap-3 border-l-2 border-gold-deep pl-5 text-base text-teak-warm">
