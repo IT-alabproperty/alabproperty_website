@@ -107,6 +107,30 @@ export interface Property {
   // ROI inputs (used as defaults in the calculator on the property page)
   estimatedMonthlyRentThb?: number;     // expected gross monthly rental income
   estimatedAnnualAppreciationPct?: number; // e.g. 4.5 means 4.5% / year
+  // Complex/building support
+  isComplex?: boolean;
+  totalUnits?: number;
+  floorplanImage?: string;
+  units?: PropertyUnit[];
+}
+
+export type PropertyUnitStatus = 'available' | 'sold-out';
+
+export interface PropertyUnit {
+  id: string;
+  propertyId: string;
+  unitType: string;
+  name: LocalizedText;
+  description?: LocalizedText;
+  priceThb?: number;
+  areaSqm?: number;
+  bedrooms: number;
+  bathrooms: number;
+  availableUnits: number;
+  status: PropertyUnitStatus;
+  gallery: string[];
+  floorRange?: string;
+  sortOrder: number;
 }
 
 // ============================================================

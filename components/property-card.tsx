@@ -4,7 +4,7 @@ import { Link } from '@/lib/i18n/routing';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { ArrowUpRight, ImageOff } from 'lucide-react';
+import { ArrowUpRight, Building2, ImageOff } from 'lucide-react';
 import { useCurrency } from './currency-context';
 import { useTaxonomyLabels } from './taxonomy-context';
 import type { Property, Locale } from '@/lib/types';
@@ -274,6 +274,14 @@ export function PropertyCard({
         {!isAvailable && (
           <span className="absolute right-4 top-4 z-[2] rounded-full bg-teak-deep/90 px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-cream">
             {tStatus(property.status)}
+          </span>
+        )}
+        {property.isComplex && (
+          <span className="absolute left-4 z-[2] rounded-full bg-cream/90 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-teak-deep flex items-center gap-1" style={{ top: investorPick ? '2.75rem' : '1rem' }}>
+            <Building2 className="h-3 w-3" strokeWidth={2} />
+            {property.totalUnits
+              ? `${property.totalUnits} ${locale === 'ru' ? 'юнитов' : 'units'}`
+              : (locale === 'ru' ? 'Комплекс' : 'Complex')}
           </span>
         )}
         <span className="absolute left-5 top-5 z-[2] hidden">

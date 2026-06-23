@@ -1,5 +1,7 @@
 import type {
   Property,
+  PropertyUnit,
+  PropertyUnitStatus,
   PropertyType,
   PropertyDeal,
   OwnershipType,
@@ -101,6 +103,9 @@ function rowToProperty(row: any): Property {
       row.estimated_annual_appreciation_pct != null
         ? Number(row.estimated_annual_appreciation_pct)
         : undefined,
+    isComplex: !!row.is_complex,
+    totalUnits: row.total_units != null ? Number(row.total_units) : undefined,
+    floorplanImage: row.floorplan_image ?? undefined,
   }
 }
 
@@ -330,4 +335,39 @@ export async function getRelatedProperties(
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)
     .map((s) => s.p)
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToUnit(row: any): PropertyUnit {
+  return {
+    id: row.id,
+    propertyId: row.property_id,
+    unitType: row.unit_type ?? '',
+    name: ensureLocalized(row.name, row.unit_type ?? ''),
+    description: row.description ? ensureLocalized(row.description, '') : undefined,
+    priceThb: row.price_thb != null ? Number(row.price_thb) : undefined,
+    areaSqm: row.area_sqm != null ? Number(row.area_sqm) : undefined,
+    bedrooms: row.bedrooms ?? 1,
+    bathrooms: row.bathrooms ?? 1,
+    availableUnits: row.available_units ?? 0,
+    status: (row.status ?? 'available') as PropertyUnitStatus,
+    gallery: Array.isArray(row.gallery) ? row.gallery : [],
+    floorRange: row.floor_range ?? undefined,
+    sortOrder: row.sort_order ?? 0,
+  }
+}
+
+export async function getPropertyUnits(propertyId: string): Promise<PropertyUnit[]> {
+  const { data, error } = await supabase
+    .from('property_units')
+    .select('*')
+    .eq('property_id', propertyId)
+    .order('sort_order', { ascending: true })
+
+  if (error) {
+    console.error('[db/properties] getPropertyUnits error:', error)
+    return []
+  }
+
+  return (data ?? []).map(rowToUnit)
 }

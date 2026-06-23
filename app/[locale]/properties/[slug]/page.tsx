@@ -7,7 +7,7 @@ import {
   ArrowLeft, BedDouble, Bath, Maximize, Building2, Calendar,
   ShieldCheck, Eye, MapPin,
 } from 'lucide-react';
-import { getPropertyBySlug, getRelatedProperties, getAllProperties } from '@/lib/db/properties';
+import { getPropertyBySlug, getRelatedProperties, getAllProperties, getPropertyUnits } from '@/lib/db/properties';
 import { getDistricts, getPropertyTypes, getCities, getAmenities, getTags } from '@/lib/db/taxonomy';
 import { PropertyGallery } from '@/components/property/property-gallery';
 import { RoiCalculator } from '@/components/property/roi-calculator';
@@ -18,8 +18,9 @@ import { Eyebrow } from '@/components/ui/eyebrow';
 import { PriceDisplay } from '@/components/property/price-display';
 import { ProposalButton } from '@/components/proposal-button';
 import { ViewTracker } from '@/components/property/view-tracker';
+import { ComplexUnitsSection } from '@/components/property/complex-units-section';
 import { buildMetadata, SITE_URL, truncate, buildBreadcrumbsLd } from '@/lib/seo';
-import type { Locale, Property, Amenity } from '@/lib/types';
+import type { Locale, Property, PropertyUnit, Amenity } from '@/lib/types';
 
 /** "phrom-phong" → "Phrom Phong" — fallback when a slug isn't in any taxonomy row. */
 function prettifySlug(slug: string): string {
@@ -178,6 +179,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
   ]);
   if (!property) notFound();
 
+  // Fetch units if this is a complex
+  const units = property?.isComplex ? await getPropertyUnits(property.id) : [];
+
   // RealEstateListing JSON-LD. Numbers get coerced where Schema.org expects
   // strings; missing values are simply omitted rather than defaulted.
   const cityRow = property.city ? cities.find((c) => c.slug === property.city) : null;
@@ -266,13 +270,14 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
         cities={cities}
         amenities={amenities}
         tags={tags}
+        units={units}
       />
     </>
   );
 }
 
 function PropertyContent({
-  property, related, districts, types, cities, amenities, tags,
+  property, related, districts, types, cities, amenities, tags, units,
 }: {
   property: Property;
   related: Property[];
@@ -281,6 +286,7 @@ function PropertyContent({
   cities: TaxRow[];
   amenities: TaxRow[];
   tags: TaxRow[];
+  units: PropertyUnit[];
 }) {
   const locale = useLocale() as Locale;
   const t = useTranslations('PropertyPage');
@@ -425,6 +431,20 @@ function PropertyContent({
         <PropertyGallery images={property.gallery} name={property.name[locale]} />
       </section>
 
+      {/* Complex: units available summary */}
+      {property.isComplex && (
+        <section className="mx-auto mt-8 max-w-[1280px] px-6 sm:px-10 lg:px-14">
+          <div className="flex items-center gap-3 rounded-xl border border-gold/30 bg-gold/5 px-6 py-4">
+            <Building2 className="h-5 w-5 text-gold-deep" strokeWidth={1.5} />
+            <span className="text-sm font-medium text-teak-deep">
+              {locale === 'ru'
+                ? `${property.totalUnits ?? units.reduce((s, u) => s + u.availableUnits, 0)} юнитов доступно`
+                : `${property.totalUnits ?? units.reduce((s, u) => s + u.availableUnits, 0)} units available`}
+            </span>
+          </div>
+        </section>
+      )}
+
       {/* Specs strip */}
       <section className="mx-auto mt-12 max-w-[1280px] px-6 sm:px-10 lg:px-14">
         <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-[var(--line)] sm:grid-cols-4 lg:grid-cols-6">
@@ -505,6 +525,11 @@ function PropertyContent({
           </aside>
         </div>
       </section>
+
+      {/* Complex: unit types */}
+      {property.isComplex && units.length > 0 && (
+        <ComplexUnitsSection units={units} floorplanImage={property.floorplanImage} />
+      )}
 
       {/*
         Map. We prefer feeding the embed an address string over raw lat/lng
