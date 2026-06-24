@@ -415,7 +415,15 @@ function PropertyContent({
               shrinks back to intrinsic width.
           */}
           <div className="flex w-full flex-col items-stretch gap-4 sm:w-auto sm:items-end">
-            <PriceDisplay priceThb={property.priceThb} deal={property.deal} areaSqm={property.areaSqm} />
+            <PriceDisplay
+              priceThb={property.priceThb}
+              deal={property.deal}
+              areaSqm={property.areaSqm}
+              isComplex={property.isComplex}
+              minUnitPrice={property.isComplex && units.length > 0
+                ? Math.min(...units.filter(u => u.priceThb && u.priceThb > 0).map(u => u.priceThb!))
+                : undefined}
+            />
             <ProposalButton
               property={{ id: property.id, slug: property.slug, name: property.name }}
               label={locale === 'ru' ? 'Получить предложение' : 'Get a Proposal'}
@@ -519,17 +527,26 @@ function PropertyContent({
             )}
           </div>
 
-          {/* Sticky contact form */}
-          <aside className="lg:sticky lg:top-28 lg:h-min">
-            <ContactForm property={property} />
+          {/* Sticky contact form — hidden on mobile for complexes (shown after unit types instead) */}
+          <aside className={`lg:sticky lg:top-28 lg:h-min ${property.isComplex && units.length > 0 ? 'hidden lg:block' : ''}`}>
+            <ContactForm property={property} units={units} />
           </aside>
         </div>
-      </section>
 
-      {/* Complex: unit types */}
-      {property.isComplex && units.length > 0 && (
-        <ComplexUnitsSection units={units} floorplanImage={property.floorplanImage} />
-      )}
+        {/* Complex: unit types — full width below the 2-col grid */}
+        {property.isComplex && units.length > 0 && (
+          <div className="mt-14">
+            <ComplexUnitsSection units={units} floorplanImage={property.floorplanImage} />
+          </div>
+        )}
+
+        {/* On mobile: duplicate contact form after unit types for complexes */}
+        {property.isComplex && units.length > 0 && (
+          <div className="mt-10 lg:hidden">
+            <ContactForm property={property} units={units} />
+          </div>
+        )}
+      </section>
 
       {/*
         Map. We prefer feeding the embed an address string over raw lat/lng

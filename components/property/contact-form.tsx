@@ -5,7 +5,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import { Check, Loader2 } from 'lucide-react';
 import { Eyebrow } from '@/components/ui/eyebrow';
 import { TurnstileWidget } from '@/components/turnstile-widget';
-import type { Locale, Property } from '@/lib/types';
+import type { Locale, Property, PropertyUnit } from '@/lib/types';
 
 type ContactChannel = 'email' | 'phone' | 'whatsapp';
 
@@ -16,6 +16,7 @@ interface FormData {
   channel: ContactChannel;
   message: string;
   cryptoPayment: boolean;
+  unitType: string;
 }
 
 interface FormErrors {
@@ -28,7 +29,7 @@ interface FormErrors {
 // pages (with a pre-filled "I'd like to know more about X" message) and on
 // the generic /contacts page (no property, blank message, no property fields
 // sent to /api/leads).
-export function ContactForm({ property }: { property?: Property }) {
+export function ContactForm({ property, units }: { property?: Property; units?: PropertyUnit[] }) {
   const t = useTranslations('Contact');
   const locale = useLocale() as Locale;
 
@@ -41,6 +42,7 @@ export function ContactForm({ property }: { property?: Property }) {
     channel: 'email',
     message: defaultMessage,
     cryptoPayment: false,
+    unitType: '',
   });
   // Honeypot — paired with a visually-hidden <input name="website"> below.
   // Real users never see it, bots autofill it. Server treats any non-empty
@@ -89,6 +91,7 @@ export function ContactForm({ property }: { property?: Property }) {
           }
         : {}),
       ...data,
+      unitType: data.unitType || undefined,
       preferredContact: data.channel,
       locale,
       submittedAt: new Date().toISOString(),
@@ -130,7 +133,7 @@ export function ContactForm({ property }: { property?: Property }) {
           type="button"
           onClick={() => {
             setSuccess(false);
-            setData({ name: '', email: '', phone: '', channel: 'email', message: defaultMessage, cryptoPayment: false });
+            setData({ name: '', email: '', phone: '', channel: 'email', message: defaultMessage, cryptoPayment: false, unitType: '' });
           }}
           className="mt-8 rounded-full border border-cream/30 px-6 py-3 text-xs font-medium uppercase tracking-[0.16em] text-cream transition-colors hover:bg-cream/10"
         >
@@ -214,6 +217,38 @@ export function ContactForm({ property }: { property?: Property }) {
             ))}
           </div>
         </Field>
+
+        {property?.isComplex && units && units.length > 0 && (
+          <Field label={locale === 'ru' ? 'Интересующий тип' : 'Unit type'}>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setData({ ...data, unitType: '' })}
+                className={`rounded-full border px-4 py-2 text-xs font-medium tracking-tight transition-colors ${
+                  !data.unitType
+                    ? 'border-teak-deep bg-teak-deep text-cream'
+                    : 'border-[var(--line-strong)] bg-paper text-teak hover:border-teak-deep'
+                }`}
+              >
+                {locale === 'ru' ? 'Любой' : 'Any'}
+              </button>
+              {units.map((u) => (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => setData({ ...data, unitType: u.name[locale] || u.unitType })}
+                  className={`rounded-full border px-4 py-2 text-xs font-medium tracking-tight transition-colors ${
+                    data.unitType === (u.name[locale] || u.unitType)
+                      ? 'border-teak-deep bg-teak-deep text-cream'
+                      : 'border-[var(--line-strong)] bg-paper text-teak hover:border-teak-deep'
+                  }`}
+                >
+                  {u.name[locale] || u.unitType}
+                </button>
+              ))}
+            </div>
+          </Field>
+        )}
 
         <Field label={t('message')}>
           <textarea

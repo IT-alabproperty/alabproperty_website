@@ -231,6 +231,7 @@ export function PropertyCard({
                 {tDeal(property.deal)}
               </div>
               <div className="font-serif text-2xl font-normal text-teak-deep">
+                {property.isComplex && <span className="text-lg">{locale === 'ru' ? 'от ' : 'from '}</span>}
                 {format(property.priceThb)}
               </div>
             </div>
@@ -289,6 +290,7 @@ export function PropertyCard({
         </span>
 
         <div className="absolute bottom-6 left-6 z-[2] font-serif text-[28px] font-normal leading-none tracking-[-0.01em] text-cream">
+          {property.isComplex && <span className="text-lg">{locale === 'ru' ? 'от ' : 'from '}</span>}
           {format(property.priceThb)}
           <em className="ml-1.5 text-sm font-light italic opacity-70">{tDeal(property.deal)}</em>
         </div>
@@ -310,13 +312,19 @@ export function PropertyCard({
           {localityLine}
         </div>
         <div className="flex gap-3.5 border-t border-[var(--line)] pt-4 text-xs text-teak-warm">
-          <span>{tProperty('bedroomsLabel', { count: property.bedrooms })}</span>
-          <span>·</span>
-          <span>{tProperty('areaLabel', { n: property.areaSqm })}</span>
-          {property.floor && (
+          {property.isComplex ? (
+            <span>{property.totalUnits ?? '—'} {locale === 'ru' ? 'юнитов' : 'units'}</span>
+          ) : (
             <>
+              <span>{tProperty('bedroomsLabel', { count: property.bedrooms })}</span>
               <span>·</span>
-              <span>{tProperty('floorLabel', { n: property.floor, total: property.totalFloors ?? property.floor })}</span>
+              <span>{tProperty('areaLabel', { n: property.areaSqm })}</span>
+              {property.floor && (
+                <>
+                  <span>·</span>
+                  <span>{tProperty('floorLabel', { n: property.floor, total: property.totalFloors ?? property.floor })}</span>
+                </>
+              )}
             </>
           )}
           {property.code && (

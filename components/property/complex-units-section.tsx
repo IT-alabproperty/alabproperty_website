@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useLocale } from 'next-intl'
-import Image from 'next/image'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import type { Locale, PropertyUnit } from '@/lib/types'
@@ -20,7 +19,7 @@ export function ComplexUnitsSection({
   const selected = units[selectedIdx]
 
   return (
-    <section className="mx-auto mt-24 max-w-[1280px] px-6 sm:mt-32 sm:px-10 lg:px-14">
+    <section>
       <Eyebrow className="mb-6">
         {locale === 'ru' ? 'Типы юнитов' : 'Unit Types'}
       </Eyebrow>
@@ -73,12 +72,11 @@ export function ComplexUnitsSection({
                   onClick={() => setLightboxIdx(i)}
                   className="relative aspect-square overflow-hidden rounded-lg transition-opacity hover:opacity-90"
                 >
-                  <Image
+                  <img
                     src={img}
                     alt={`${selected.name[locale]} ${i + 1}`}
-                    fill
-                    sizes="(max-width: 640px) 30vw, 150px"
-                    className="object-cover"
+                    className="absolute inset-0 h-full w-full object-cover"
+                    loading="lazy"
                   />
                 </button>
               ))}
@@ -240,14 +238,11 @@ function UnitLightbox({
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-cream/30 border-t-gold" />
           </div>
         )}
-        <Image
+        <img
           key={images[index]}
           src={images[index]}
           alt={`Photo ${index + 1}`}
-          fill
-          sizes="(max-width: 1400px) 90vw, 1400px"
-          className={`object-contain transition-opacity duration-200 ${isCurrentLoaded ? 'opacity-100' : 'opacity-0'}`}
-          priority
+          className={`max-h-full max-w-full object-contain transition-opacity duration-200 ${isCurrentLoaded ? 'opacity-100' : 'opacity-0'}`}
           onLoad={() => {
             const src = images[index]
             setLoaded((prev) => {
