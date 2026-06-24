@@ -456,11 +456,21 @@ function PropertyContent({
       {/* Specs strip */}
       <section className="mx-auto mt-12 max-w-[1280px] px-6 sm:px-10 lg:px-14">
         <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-[var(--line)] sm:grid-cols-4 lg:grid-cols-6">
-          <SpecCell icon={<BedDouble className="h-4 w-4" strokeWidth={1.5} />} label={tCatalog('filterPanel.bedrooms')} value={`${property.bedrooms}`} />
-          <SpecCell icon={<Bath className="h-4 w-4" strokeWidth={1.5} />} label={tProperty('bathrooms')} value={`${property.bathrooms}`} />
-          <SpecCell icon={<Maximize className="h-4 w-4" strokeWidth={1.5} />} label={tProperty('area')} value={tProperty('areaLabel', { n: property.areaSqm })} />
-          {property.floor && (
-            <SpecCell icon={<Building2 className="h-4 w-4" strokeWidth={1.5} />} label={tProperty('floor')} value={`${property.floor}/${property.totalFloors ?? property.floor}`} />
+          {!property.isComplex && (
+            <>
+              <SpecCell icon={<BedDouble className="h-4 w-4" strokeWidth={1.5} />} label={tCatalog('filterPanel.bedrooms')} value={`${property.bedrooms}`} />
+              <SpecCell icon={<Bath className="h-4 w-4" strokeWidth={1.5} />} label={tProperty('bathrooms')} value={`${property.bathrooms}`} />
+              <SpecCell icon={<Maximize className="h-4 w-4" strokeWidth={1.5} />} label={tProperty('area')} value={tProperty('areaLabel', { n: property.areaSqm })} />
+              {property.floor && (
+                <SpecCell icon={<Building2 className="h-4 w-4" strokeWidth={1.5} />} label={tProperty('floor')} value={`${property.floor}/${property.totalFloors ?? property.floor}`} />
+              )}
+            </>
+          )}
+          {property.isComplex && (
+            <>
+              <SpecCell icon={<Building2 className="h-4 w-4" strokeWidth={1.5} />} label={locale === 'ru' ? 'Этажей' : 'Floors'} value={`${property.totalFloors ?? '—'}`} />
+              <SpecCell icon={<Building2 className="h-4 w-4" strokeWidth={1.5} />} label={locale === 'ru' ? 'Юнитов' : 'Units'} value={`${property.totalUnits ?? '—'}`} />
+            </>
           )}
           <SpecCell
             icon={<Calendar className="h-4 w-4" strokeWidth={1.5} />}
