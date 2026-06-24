@@ -27,11 +27,11 @@ export function ComplexUnitsSection({
         {locale === 'ru' ? 'Выберите планировку' : 'Choose Your Layout'}
       </h2>
 
-      {/* {floorplanImage && (
+      {floorplanImage && (
         <div className="mb-10 overflow-hidden rounded-xl border border-[var(--line)]">
           <img src={floorplanImage} alt="Floor plan" className="w-full" />
         </div>
-      )} */}
+      )}
 
       {/* Unit type tabs */}
       <div className="mb-8 flex flex-wrap gap-2">
