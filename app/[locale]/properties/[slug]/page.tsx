@@ -455,7 +455,7 @@ function PropertyContent({
 
       {/* Specs strip */}
       <section className="mx-auto mt-12 max-w-[1280px] px-6 sm:px-10 lg:px-14">
-        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-[var(--line)] sm:grid-cols-4 lg:grid-cols-6">
+        <div className={`grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-[var(--line)] ${property.isComplex ? 'sm:grid-cols-4' : 'sm:grid-cols-4 lg:grid-cols-6'}`}>
           {!property.isComplex && (
             <>
               <SpecCell icon={<BedDouble className="h-4 w-4" strokeWidth={1.5} />} label={tCatalog('filterPanel.bedrooms')} value={`${property.bedrooms}`} />
