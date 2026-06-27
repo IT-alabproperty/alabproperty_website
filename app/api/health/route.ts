@@ -22,12 +22,6 @@ export const runtime = 'nodejs'
 const FAST_CHECK_TIMEOUT_MS = 5_000
 const SLOW_CHECK_TIMEOUT_MS = 10_000
 
-/**
- * Structured result for one subsystem. `skipped` covers the dev/staging
- * case where an env var isn't set — we don't want a missing RESEND_API_KEY
- * to surface as "email is down" on someone's laptop. Skipped checks DON'T
- * fail the overall health.
- */
 type CheckResult =
   | { ok: true; ms: number }
   | { ok: false; ms: number; error: string }
@@ -47,9 +41,15 @@ type CheckResult =
 export async function GET() {
   const startedAt = Date.now()
 
-  // Resend and Telegram get the slow-budget timeout because their public-
-  // internet round-trips occasionally tail-spike past the fast budget
-  // without anything actually being broken. See timeout constants above.
+  // Critical checks — if any of these fail the endpoint returns 503 and the
+  // monitoring worker fires an alert. These are services whose failure
+  // directly impacts visitors (pages won't load, forms won't save).
+  //
+  // Non-critical checks — run for diagnostics but their failure does NOT
+  // flip the overall status. Telegram being slow doesn't break anything for
+  // visitors; Resend being slow just delays confirmation emails. We were
+  // getting daily false "SITE DOWN" alerts because Telegram API timeouts
+  // (common from Vercel's region) produced 503 → alert → recovery → alert.
   const [supabaseResult, storageResult, resendResult, telegramResult, upstashResult] =
     await Promise.all([
       runCheck(checkSupabase, FAST_CHECK_TIMEOUT_MS),
@@ -59,30 +59,47 @@ export async function GET() {
       runCheck(checkUpstash, FAST_CHECK_TIMEOUT_MS),
     ])
 
-  const checks: Record<string, CheckResult> = {
+  const criticalChecks: Record<string, CheckResult> = {
     supabase: supabaseResult,
     storage: storageResult,
-    resend: resendResult,
-    telegram: telegramResult,
     upstash: upstashResult,
   }
 
-  // A check counts as "passing" if it's ok OR was skipped (missing env).
-  // Skipping = informational, not a failure — otherwise dev environments
-  // without every credential set would always look degraded.
-  const allOk = Object.values(checks).every((c) => 'skipped' in c || c.ok)
+  const nonCriticalChecks: Record<string, CheckResult> = {
+    resend: resendResult,
+    telegram: telegramResult,
+  }
+
+  const checks: Record<string, CheckResult> = {
+    ...criticalChecks,
+    ...nonCriticalChecks,
+  }
+
+  const allCriticalOk = Object.values(criticalChecks).every(
+    (c) => 'skipped' in c || c.ok,
+  )
+  const allNonCriticalOk = Object.values(nonCriticalChecks).every(
+    (c) => 'skipped' in c || c.ok,
+  )
+  const allOk = allCriticalOk && allNonCriticalOk
+
+  // HTTP status and JSON `status` are both driven by CRITICAL checks only.
+  // Non-critical failures (Telegram, Resend) are visible in the JSON body
+  // under `checks` for manual inspection, but they don't flip the overall
+  // status and don't produce 503 — the monitoring worker won't fire any
+  // alert for a slow Telegram API.
+  const status = allCriticalOk ? 'ok' : 'degraded'
 
   return NextResponse.json(
     {
-      status: allOk ? 'ok' : 'degraded',
+      status,
       uptimeMs: process.uptime ? Math.round(process.uptime() * 1000) : null,
       tookMs: Date.now() - startedAt,
       checks,
     },
     {
-      status: allOk ? 200 : 503,
+      status: allCriticalOk ? 200 : 503,
       headers: {
-        // Never cache — uptime monitors must see real-time status.
         'Cache-Control': 'no-store, max-age=0',
       },
     },
